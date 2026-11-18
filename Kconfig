@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2026 Denis Iurev <denis.yuriev@icloud.com>
+
+menu "Accelerated Cryptographic Algorithms for CPU (mips)"
+
+config CRYPTO_AES_MIPS32R2
+	tristate "Ciphers: AES (MIPS32r2)"
+	depends on CPU_MIPS32_R2
+	select CRYPTO_AEAD
+	select CRYPTO_ALGAPI
+	select CRYPTO_SKCIPHER
+	select CRYPTO_LIB_AES
+	help
+	  Block cipher AES (FIPS-197), length-preserving modes ECB, CBC
+	  and CTR, and AEAD GCM(AES) and CCM(AES) for MIPS32r2,
+	  little-endian or big-endian.
+
+	  The round uses Gladman T-tables. This implementation may be
+	  vulnerable to cache timing attacks. GHASH uses 16 KiB when L1 D
+	  is at least 32 KiB, and 8 KiB otherwise.
+
+endmenu

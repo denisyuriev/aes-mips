@@ -1,0 +1,14 @@
+aes-mips (kernel module aes-mips) is provided under:
+
+	SPDX-License-Identifier: GPL-2.0
+
+Being under the terms of the GNU General Public License version 2,
+according with:
+
+	LICENSE
+
+A source file may carry SPDX-License-Identifier: GPL-2.0-only or
+GPL-2.0-or-later. Built together, the module is distributed as GPL-2.0,
+matching MODULE_LICENSE("GPL").
+
+Copyright (C) 2026 Denis Iurev <denis.yuriev@icloud.com>

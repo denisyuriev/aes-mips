@@ -10,8 +10,6 @@ modules.order
 Module.symvers
 .tmp_versions/
 
-be-test/*
-bench/*
 *.elf
 
 # macOS

@@ -1,0 +1,18 @@
+# Build artifacts
+*.o
+*.ko
+*.a
+*.mod
+*.mod.c
+.*.cmd
+.module-common.o
+modules.order
+Module.symvers
+.tmp_versions/
+
+be-test/*
+bench/*
+*.elf
+
+# macOS
+.DS_Store

@@ -18,8 +18,10 @@
  * DSP does not shorten this: the shifts cross a halfword, and lwx
  * cannot serve the other three words of the row.
  *
- * The blocks entry folds the last half into s0-s3; the loop stops at
- * the end of the buffer.
+ * The blocks entry folds the last half into s0-s3. The next source
+ * block is prefetched only when its 32-byte line lies inside the
+ * source buffer. The one-block leaf does not prefetch: the accumulator
+ * is 16 bytes.
  *
  * ghash_mips_mul_8k(acc, tab)
  * ghash_mips_mul_8k_blocks(acc, tab, src, nblocks)  nblocks >= 2, src aligned 4
@@ -102,11 +104,10 @@
 .endm
 
 /* First half: the accumulator is the two rows. Leaves red in t4. */
-.macro mul8k_open prefreg
+.macro mul8k_open
 	ins	a2, v1, 4, 8
 	srl	v1, v1, 8
 	ins	a3, v1, 4, 8
-	pref	0, 16(\prefreg)
 	srl	v1, v1, 8
 	lw	t0, 4096(a2)
 	lw	t6, 0(a3)
@@ -135,7 +136,7 @@ ghash_mips_mul_8k:
 	move	a2, a1
 	move	a3, a1
 	lw	v1, 0(a0)
-	mul8k_open a0
+	mul8k_open
 	mul8k_half 0, 0
 	mul8k_half 4, 0
 	mul8k_half 0, 0
@@ -154,7 +155,7 @@ ghash_mips_mul_8k:
 	.globl	ghash_mips_mul_8k_blocks
 	.ent	ghash_mips_mul_8k_blocks
 ghash_mips_mul_8k_blocks:
-	addiu	sp, sp, -24
+	addiu	sp, sp, -32
 	sw	s0, 0(sp)
 	sw	s1, 4(sp)
 	sw	s2, 8(sp)
@@ -166,6 +167,7 @@ ghash_mips_mul_8k_blocks:
 	lw	s2, 8(a0)
 	lw	s3, 12(a0)
 	move	s4, a2
+	sw	s4, 24(sp)
 	sll	a3, a3, 4
 	addu	s5, s4, a3
 	move	a2, a1
@@ -189,7 +191,19 @@ ghash_mips_mul_8k_blocks:
 	xor	s1, s1, t6
 	xor	s0, s0, t7
 	move	v1, s0
-	mul8k_open s4
+	lw	t4, 24(sp)
+	addiu	t5, s4, 16
+	srl	t5, t5, 5
+	sll	t5, t5, 5
+	sltu	t4, t5, t4
+	bnez	t4, 9f
+	addiu	t5, t5, 32
+	sltu	t4, s5, t5
+	bnez	t4, 9f
+	nop
+	pref	0, 16(s4)
+9:
+	mul8k_open
 	mul8k_half 0, 0
 	mul8k_half 1, 0
 	mul8k_half 0, 0
@@ -198,9 +212,8 @@ ghash_mips_mul_8k_blocks:
 	mul8k_half 3, 0
 	mul8k_half 0, 1
 	addiu	s4, s4, 16
-	/* pref is in the delay slot: 16(s4) is past the next block. */
 	bne	s4, s5, 1b
-	pref	0, 16(s4)
+	nop
 
 	sw	s0, 0(a0)
 	sw	s1, 4(a0)
@@ -213,5 +226,5 @@ ghash_mips_mul_8k_blocks:
 	lw	s4, 16(sp)
 	lw	s5, 20(sp)
 	jr	ra
-	addiu	sp, sp, 24
+	addiu	sp, sp, 32
 	.end	ghash_mips_mul_8k_blocks

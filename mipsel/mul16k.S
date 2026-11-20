@@ -175,18 +175,17 @@ LEAF(ghash_mips_mul_16k)
 END(ghash_mips_mul_16k)
 
 	.align	5
-NESTED(ghash_mips_mul_16k_blocks, 24, ra)
+NESTED(ghash_mips_mul_16k_blocks, 32, ra)
 	.set	push
 	.set	noreorder
 
 	/*
 	 * a0 accumulator, a1 table, a2 src, a3 nblocks (>= 2).
 	 * s0..s3 running block, s4 src, s5 end of src.
-	 * The last fold writes the product into s0..s3. pref is in the
-	 * delay slot after addiu, so 16(s4) is the block past the next
-	 * iteration. This iteration's multiply has already finished.
+	 * 24(sp) is the source base. pref 0 of the next block runs only
+	 * when that block's cache line lies inside [base, end).
 	 */
-	addiu	sp, sp, -24
+	addiu	sp, sp, -32
 	sw	s0, 0(sp)
 	sw	s1, 4(sp)
 	sw	s2, 8(sp)
@@ -200,6 +199,7 @@ NESTED(ghash_mips_mul_16k_blocks, 24, ra)
 	sll	a3, a3, 4
 	addu	s5, a2, a3
 	move	s4, a2
+	sw	s4, 24(sp)
 	move	a2, a1
 	move	a3, a1
 	move	t6, a1
@@ -221,10 +221,22 @@ NESTED(ghash_mips_mul_16k_blocks, 24, ra)
 	xor	s2, s2, t5
 	xor	s1, s1, t8
 	xor	s0, s0, t7
+	lw	t4, 24(sp)
+	addiu	t5, s4, 16
+	srl	t5, t5, 5
+	sll	t5, t5, 5
+	sltu	t4, t5, t4
+	bnez	t4, 9f
+	addiu	t5, t5, 32
+	sltu	t4, s5, t5
+	bnez	t4, 9f
+	nop
+	pref	0, 16(s4)
+9:
 	mul16k_run 1, 1
 	addiu	s4, s4, 16
 	bne	s4, s5, 1b
-	pref	0, 16(s4)
+	nop
 
 	sw	s0, 0(a0)
 	sw	s1, 4(a0)
@@ -237,6 +249,6 @@ NESTED(ghash_mips_mul_16k_blocks, 24, ra)
 	lw	s4, 16(sp)
 	lw	s5, 20(sp)
 	jr	ra
-	addiu	sp, sp, 24
+	addiu	sp, sp, 32
 	.set	pop
 END(ghash_mips_mul_16k_blocks)

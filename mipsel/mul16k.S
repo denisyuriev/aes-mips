@@ -182,8 +182,7 @@ NESTED(ghash_mips_mul_16k_blocks, 32, ra)
 	/*
 	 * a0 accumulator, a1 table, a2 src, a3 nblocks (>= 2).
 	 * s0..s3 running block, s4 src, s5 end of src.
-	 * 24(sp) is the source base. pref 0 of the next block runs only
-	 * when that block's cache line lies inside [base, end).
+	 * pref 0 of the next block has no bounds check.
 	 */
 	addiu	sp, sp, -32
 	sw	s0, 0(sp)
@@ -199,7 +198,6 @@ NESTED(ghash_mips_mul_16k_blocks, 32, ra)
 	sll	a3, a3, 4
 	addu	s5, a2, a3
 	move	s4, a2
-	sw	s4, 24(sp)
 	move	a2, a1
 	move	a3, a1
 	move	t6, a1
@@ -221,18 +219,7 @@ NESTED(ghash_mips_mul_16k_blocks, 32, ra)
 	xor	s2, s2, t5
 	xor	s1, s1, t8
 	xor	s0, s0, t7
-	lw	t4, 24(sp)
-	addiu	t5, s4, 16
-	srl	t5, t5, 5
-	sll	t5, t5, 5
-	sltu	t4, t5, t4
-	bnez	t4, 9f
-	addiu	t5, t5, 32
-	sltu	t4, s5, t5
-	bnez	t4, 9f
-	nop
 	pref	0, 16(s4)
-9:
 	mul16k_run 1, 1
 	addiu	s4, s4, 16
 	bne	s4, s5, 1b

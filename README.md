@@ -32,8 +32,7 @@ BE checks: qemu (`-M malta -cpu 24Kc`).
 
 ## Performance on MT7621 (1004Kc)
 
-Kernel 6.18.60. ECB, CBC, CTR and CCM: 17 November 2026.
-GCM and OpenVPN DCO: 20 November 2026, one session, `generic` then `aes-mips`.
+Kernel 6.18.60. `aes-mips` column: 21 November 2026, three runs, median. `generic` is the 20 November session and was not remeasured.
 
 ### `tcrypt` (MB/s)
 
@@ -47,18 +46,18 @@ CTR/GCM/CCM — 1420-byte blocks.
 
 | | generic | aes-mips | Δ |
 |---|---:|---:|---:|
-| AES-128-ECB | 15.2 | 21.3 | +40% |
-| AES-192-ECB | 12.8 | 17.9 | +40% |
+| AES-128-ECB | 15.1 | 21.3 | +41% |
+| AES-192-ECB | 12.8 | 17.8 | +39% |
 | AES-256-ECB | 11.1 | 15.3 | +38% |
 | AES-128-CBC | 13.0 | 21.2 | +63% |
-| AES-192-CBC | 11.2 | 17.8 | +59% |
+| AES-192-CBC | 11.2 | 17.7 | +58% |
 | AES-256-CBC | 9.9 | 15.3 | +55% |
 | AES-128-CTR | 13.6 | 24.8 | +82% |
 | AES-192-CTR | 11.6 | 20.2 | +74% |
-| AES-256-CTR | 10.2 | 17.1 | +68% |
-| AES-128-GCM | 7.3 | 17.2 | +135% |
-| AES-192-GCM | 6.7 | 14.8 | +122% |
-| AES-256-GCM | 6.2 | 13.0 | +110% |
+| AES-256-CTR | 10.2 | 17.0 | +67% |
+| AES-128-GCM | 7.3 | 17.4 | +138% |
+| AES-192-GCM | 6.7 | 15.0 | +124% |
+| AES-256-GCM | 6.2 | 13.2 | +113% |
 | AES-128-CCM (`rfc4309`) | 6.5 | 11.0 | +69% |
 
 ### OpenVPN DCO (AES-128-GCM)
@@ -73,5 +72,5 @@ Measured with iperf3 TCP (three 10-second runs), Mbit/s.
 
 | | generic | aes-mips | Δ |
 |---|---:|---:|---:|
-| reverse | 38.9 | 66.7 | +71% |
-| send | 26.0 | 45.0 | +73% |
+| reverse | 41.2 | 66.7 | +62% |
+| send | 30.5 | 50.6 | +66% |

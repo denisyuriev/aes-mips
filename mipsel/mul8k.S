@@ -167,7 +167,6 @@ ghash_mips_mul_8k_blocks:
 	lw	s2, 8(a0)
 	lw	s3, 12(a0)
 	move	s4, a2
-	sw	s4, 24(sp)
 	sll	a3, a3, 4
 	addu	s5, s4, a3
 	move	a2, a1
@@ -191,18 +190,7 @@ ghash_mips_mul_8k_blocks:
 	xor	s1, s1, t6
 	xor	s0, s0, t7
 	move	v1, s0
-	lw	t4, 24(sp)
-	addiu	t5, s4, 16
-	srl	t5, t5, 5
-	sll	t5, t5, 5
-	sltu	t4, t5, t4
-	bnez	t4, 9f
-	addiu	t5, t5, 32
-	sltu	t4, s5, t5
-	bnez	t4, 9f
-	nop
 	pref	0, 16(s4)
-9:
 	mul8k_open
 	mul8k_half 0, 0
 	mul8k_half 1, 0

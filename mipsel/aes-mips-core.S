@@ -457,6 +457,23 @@ aes_mips_round_entry_dsp:
 #endif
 	.text
 
+	/*
+	 * Next source line, hint 4 (load_streamed, way 0). For a 16-byte
+	 * block, 32(a2) names the same line as ((a2 + 64) & ~31) - 32.
+	 * Hint 0 and 4 do not take a bounds check on 4K, 24K, 74K, 1004K.
+	 */
+	.macro	pref_fwd
+	pref	4, 32(a2)
+	.endm
+
+	/*
+	 * CBC decrypt walks down. -32(a2) names the same previous line as
+	 * (a2 & ~31) - 32 when the block is 16-byte aligned.
+	 */
+	.macro	pref_back
+	pref	4, -32(a2)
+	.endm
+
 	.align	5
 NESTED(aes_mips_ecb_encrypt, FRAMESZ, ra)
 	save_frame
@@ -468,6 +485,7 @@ NESTED(aes_mips_ecb_encrypt, FRAMESZ, ra)
 	sll	a3, a3, 4
 	addu	a3, a2, a3
 .Lecb_enc_loop:
+	pref_fwd
 	load_whiten a2
 	jalr	t9
 	xor	s3, s3, s7
@@ -490,6 +508,7 @@ NESTED(aes_mips_ecb_decrypt, FRAMESZ, ra)
 	sll	a3, a3, 4
 	addu	a3, a2, a3
 .Lecb_dec_loop:
+	pref_fwd
 	load_whiten a2
 	jalr	t9
 	xor	s3, s3, s7
@@ -520,6 +539,7 @@ NESTED(aes_mips_cbc_encrypt, FRAMESZ, ra)
 	lw	s2, 8(s8)
 	lw	s3, 12(s8)
 .Lcbc_enc_loop:
+	pref_fwd
 	xor_mem	a2, 0
 	xor	s0, s0, s4
 	xor	s1, s1, s5
@@ -551,6 +571,7 @@ NESTED(aes_mips_cbc_mac, FRAMESZ, ra)
 	lw	s2, 8(s8)
 	lw	s3, 12(s8)
 .Lcbc_mac_loop:
+	pref_fwd
 	xor_mem	a2, 0
 	xor	s0, s0, s4
 	xor	s1, s1, s5
@@ -595,6 +616,7 @@ NESTED(aes_mips_cbc_decrypt, FRAMESZ, ra)
 	beq	a2, a3, .Lcbc_dec_first
 	sw	v1, OFF_CL+12(sp)
 .Lcbc_dec_loop:
+	pref_back
 	load_whiten a2
 	jalr	t9
 	xor	s3, s3, s7
@@ -807,6 +829,7 @@ NESTED(aes_mips_ctr_crypt, FRAMESZ, ra)
 	move	a0, s1
 	addiu	t9, t9, 512
 .Lfast:
+	pref_fwd
 	lw	t8, OFF_Z3(sp)
 	andi	v0, s7, 0xff
 	xor	v0, v0, s8

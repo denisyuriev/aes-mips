@@ -27,50 +27,81 @@ A small last-round AES tweak for DSPr1 (`LBUX`) when the ASE is present on the C
 
 Sources are meant for `arch/mips/crypto/` in the kernel tree. `Makefile` and `Kconfig` are in-tree style.
 
-Primary development platform: MediaTek MT7621 (1004Kc).
-BE checks: qemu (`-M malta -cpu 24Kc`).
+First board: TP-Link Archer C6U v1, MediaTek MT7621 (MIPS 1004Kc little-endian).
+Second board: MikroTik RB951Ui-2HnD, Atheros AR9344 (MIPS 74Kc, big-endian).
+Both byte orders are also checked in qemu (`-M malta -cpu 24Kc`).
 
-## Performance on MT7621 (1004Kc)
+## Performance
 
-Kernel 6.18.60. `aes-mips` column: 21 November 2026, three runs, median. `generic` is the 20 November session and was not remeasured.
+`generic` — the kernel’s default software AES;
+`aes-mips` — this module.
+Three runs, median.
 
 ### `tcrypt` (MB/s)
 
-Encryption.
+Encryption. ECB/CBC — 1424-byte blocks; CTR/GCM/CCM — 1420-byte blocks.
 
-ECB/CBC — 1424-byte blocks;
-CTR/GCM/CCM — 1420-byte blocks.
-
-`generic` — the kernel’s default software AES;
-`aes-mips` — this module.
-
-| | generic | aes-mips | Δ |
-|---|---:|---:|---:|
-| AES-128-ECB | 15.1 | 21.3 | +41% |
-| AES-192-ECB | 12.8 | 17.8 | +39% |
-| AES-256-ECB | 11.1 | 15.3 | +38% |
-| AES-128-CBC | 13.0 | 21.2 | +63% |
-| AES-192-CBC | 11.2 | 17.7 | +58% |
-| AES-256-CBC | 9.9 | 15.3 | +55% |
-| AES-128-CTR | 13.6 | 24.8 | +82% |
-| AES-192-CTR | 11.6 | 20.2 | +74% |
-| AES-256-CTR | 10.2 | 17.0 | +67% |
-| AES-128-GCM | 7.3 | 17.4 | +138% |
-| AES-192-GCM | 6.7 | 15.0 | +124% |
-| AES-256-GCM | 6.2 | 13.2 | +113% |
-| AES-128-CCM (`rfc4309`) | 6.5 | 11.0 | +69% |
+<table>
+<thead>
+<tr>
+<th rowspan="2"></th>
+<th colspan="3" align="center">MT7621 (1004Kc)</th>
+<th colspan="3" align="center">AR9344 (74Kc)</th>
+</tr>
+<tr>
+<th align="right">generic</th>
+<th align="right">aes-mips</th>
+<th align="right">Δ</th>
+<th align="right">generic</th>
+<th align="right">aes-mips</th>
+<th align="right">Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>AES-128-ECB</td><td align="right">15.1</td><td align="right">21.3</td><td align="right">+41%</td><td align="right">11.9</td><td align="right">20.4</td><td align="right">+72%</td></tr>
+<tr><td>AES-192-ECB</td><td align="right">12.8</td><td align="right">17.8</td><td align="right">+39%</td><td align="right">10.2</td><td align="right">17.2</td><td align="right">+69%</td></tr>
+<tr><td>AES-256-ECB</td><td align="right">11.1</td><td align="right">15.3</td><td align="right">+38%</td><td align="right">8.9</td><td align="right">14.9</td><td align="right">+67%</td></tr>
+<tr><td>AES-128-CBC</td><td align="right">13.0</td><td align="right">21.2</td><td align="right">+63%</td><td align="right">10.3</td><td align="right">20.4</td><td align="right">+97%</td></tr>
+<tr><td>AES-192-CBC</td><td align="right">11.2</td><td align="right">17.7</td><td align="right">+58%</td><td align="right">9.0</td><td align="right">17.2</td><td align="right">+91%</td></tr>
+<tr><td>AES-256-CBC</td><td align="right">9.9</td><td align="right">15.3</td><td align="right">+55%</td><td align="right">8.0</td><td align="right">14.8</td><td align="right">+85%</td></tr>
+<tr><td>AES-128-CTR</td><td align="right">13.6</td><td align="right">24.8</td><td align="right">+82%</td><td align="right">10.8</td><td align="right">23.7</td><td align="right">+118%</td></tr>
+<tr><td>AES-192-CTR</td><td align="right">11.6</td><td align="right">20.2</td><td align="right">+74%</td><td align="right">9.4</td><td align="right">19.4</td><td align="right">+107%</td></tr>
+<tr><td>AES-256-CTR</td><td align="right">10.2</td><td align="right">17.0</td><td align="right">+67%</td><td align="right">8.3</td><td align="right">16.5</td><td align="right">+99%</td></tr>
+<tr><td>AES-128-GCM</td><td align="right">7.3</td><td align="right">17.4</td><td align="right">+138%</td><td align="right">6.8</td><td align="right">15.3</td><td align="right">+124%</td></tr>
+<tr><td>AES-192-GCM</td><td align="right">6.7</td><td align="right">15.0</td><td align="right">+124%</td><td align="right">6.2</td><td align="right">13.4</td><td align="right">+116%</td></tr>
+<tr><td>AES-256-GCM</td><td align="right">6.2</td><td align="right">13.2</td><td align="right">+113%</td><td align="right">5.7</td><td align="right">11.9</td><td align="right">+109%</td></tr>
+<tr><td>AES-128-CCM (<code>rfc4309</code>)</td><td align="right">6.5</td><td align="right">11.0</td><td align="right">+69%</td><td align="right">5.3</td><td align="right">10.4</td><td align="right">+94%</td></tr>
+</tbody>
+</table>
 
 ### OpenVPN DCO (AES-128-GCM)
 
-Measured with iperf3 TCP (three 10-second runs), Mbit/s.
-
-`generic` — the kernel’s default software AES;
-`aes-mips` — this module.
+iperf3 TCP, three 10-second runs, Mbit/s.
 
 `send` — encryption on the router;
 `reverse` — decryption on the router.
 
-| | generic | aes-mips | Δ |
-|---|---:|---:|---:|
-| reverse | 41.2 | 66.7 | +62% |
-| send | 30.5 | 50.6 | +66% |
+`generic` — the kernel’s default software AES;
+`aes-mips` — this module.
+
+<table>
+<thead>
+<tr>
+<th rowspan="2"></th>
+<th colspan="3" align="center">MT7621 (1004Kc)</th>
+<th colspan="3" align="center">AR9344 (74Kc)</th>
+</tr>
+<tr>
+<th align="right">generic</th>
+<th align="right">aes-mips</th>
+<th align="right">Δ</th>
+<th align="right">generic</th>
+<th align="right">aes-mips</th>
+<th align="right">Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>reverse</td><td align="right">42.0</td><td align="right">72.4</td><td align="right">+72%</td><td align="right">38.8</td><td align="right">58.3</td><td align="right">+50%</td></tr>
+<tr><td>send</td><td align="right">35.1</td><td align="right">57.2</td><td align="right">+63%</td><td align="right">25.2</td><td align="right">31.2</td><td align="right">+24%</td></tr>
+</tbody>
+</table>

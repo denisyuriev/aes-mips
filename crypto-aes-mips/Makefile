@@ -17,7 +17,7 @@ PKG_LICENSE_FILES:=../LICENSE
 
 include $(INCLUDE_DIR)/package.mk
 
-define KernelPackage/aes-mips
+define KernelPackage/crypto-aes-mips
   SUBMENU:=Cryptographic API modules
   TITLE:=AES for MIPS32r2
   DEPENDS:=@(mips||mipsel) \
@@ -27,7 +27,7 @@ define KernelPackage/aes-mips
   AUTOLOAD:=$(call AutoLoad,49,aes-mips)
 endef
 
-define KernelPackage/aes-mips/description
+define KernelPackage/crypto-aes-mips/description
   AES cipher, ECB, CBC, CTR, GCM and CCM for MIPS32r2, little-endian
   or big-endian. Built from this feed; the OpenWrt kernel tree is not
   patched. aes_expandkey comes from CRYPTO_LIB_AES, which OpenWrt
@@ -47,4 +47,4 @@ define Build/Compile
 		modules
 endef
 
-$(eval $(call KernelPackage,aes-mips))
+$(eval $(call KernelPackage,crypto-aes-mips))

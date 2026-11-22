@@ -46,7 +46,7 @@ This repository is an external feed. The package appears in `make menuconfig` on
 2. `./scripts/feeds update aes_mips`
 3. `./scripts/feeds install -p aes_mips -a`
 4. Select a MIPS32r2 target.
-5. Kernel modules → Cryptographic API modules → `kmod-aes-mips` as `<*>`.
+5. Kernel modules → Cryptographic API modules → `kmod-crypto-aes-mips` as `<*>`.
 6. Build the image as usual.
 
 `<*>` puts `aes-mips.ko` into the image. The module loads on boot. `/proc/crypto` then lists `aes-mips`, `ecb-aes-mips`, `cbc-aes-mips`, `ctr-aes-mips`, `gcm-aes-mips`, and `ccm-aes-mips`.

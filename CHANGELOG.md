@@ -2,7 +2,7 @@
 
 ## 2026-11-22
 
-OpenWrt feed in this repository. `kmod-aes-mips` shows up in `make menuconfig` on any MIPS32r2 target (`4kec`, `24kc`, `34kc`, `74kc`, `1004kc`, `mips32r2`), little-endian or big-endian. The module is built out of tree; the OpenWrt kernel tree is not patched.
+OpenWrt feed in this repository. `kmod-crypto-aes-mips` shows up in `make menuconfig` on any MIPS32r2 target (`4kec`, `24kc`, `34kc`, `74kc`, `1004kc`, `mips32r2`), little-endian or big-endian. The module is built out of tree; the OpenWrt kernel tree is not patched.
 
 ## 2026-11-21
 

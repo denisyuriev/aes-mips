@@ -46,7 +46,7 @@ GHASH — таблицы 16 КиБ при L1 D ≥ 32 КиБ, иначе 8 Ки�
 2. `./scripts/feeds update aes_mips`
 3. `./scripts/feeds install -p aes_mips -a`
 4. Выбрать цель MIPS32r2.
-5. Kernel modules → Cryptographic API modules → `kmod-aes-mips` в `<*>`.
+5. Kernel modules → Cryptographic API modules → `kmod-crypto-aes-mips` в `<*>`.
 6. Собрать образ как обычно.
 
 `<*>` кладёт `aes-mips.ko` в образ. Модуль загружается при старте. В `/proc/crypto` появляются `aes-mips`, `ecb-aes-mips`, `cbc-aes-mips`, `ctr-aes-mips`, `gcm-aes-mips` и `ccm-aes-mips`.

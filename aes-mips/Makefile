@@ -22,7 +22,7 @@ define KernelPackage/aes-mips
   TITLE:=AES for MIPS32r2
   DEPENDS:=@(mips||mipsel) \
 	@(CPU_TYPE="4kec"||CPU_TYPE="24kc"||CPU_TYPE="34kc"||CPU_TYPE="74kc"||CPU_TYPE="1004kc"||CPU_TYPE="mips32r2") \
-	+kmod-crypto-aead +kmod-crypto-manager +kmod-crypto-aes
+	+kmod-crypto-aead +kmod-crypto-manager
   FILES:=$(PKG_BUILD_DIR)/aes-mips.ko
   AUTOLOAD:=$(call AutoLoad,49,aes-mips)
 endef
@@ -30,7 +30,8 @@ endef
 define KernelPackage/aes-mips/description
   AES cipher, ECB, CBC, CTR, GCM and CCM for MIPS32r2, little-endian
   or big-endian. Built from this feed; the OpenWrt kernel tree is not
-  patched. aes_expandkey comes from the kernel AES library.
+  patched. aes_expandkey comes from CRYPTO_LIB_AES, which OpenWrt
+  builds into the kernel.
 endef
 
 define Build/Prepare

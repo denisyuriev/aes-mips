@@ -2,11 +2,13 @@
 /*
  * Copyright (C) 2026 Denis Iurev <denis.yuriev@icloud.com>
  *
- * AES cipher, ECB/CBC/CTR, GCM and CCM for MIPS32r2, either endian.
- * Cipher aes-mips is priority 200, above aes-generic (100).
- * Skcipher ecb/cbc/ctr-aes-mips is priority 300 so it wins over the
- * template spawned from that cipher. AEAD gcm-aes-mips and ccm-aes-mips
- * are priority 400.
+ * AES cipher and optional ECB, CBC, CTR, GCM and CCM for MIPS32r2,
+ * either endian. Cipher aes-mips is priority 200, above aes-generic (100).
+ * A built skcipher is priority 300 so it wins over the template spawned
+ * from that cipher. A built AEAD is priority 400.
+ * AES_MIPS_ECB, AES_MIPS_CBC, AES_MIPS_CTR, AES_MIPS_GCM and AES_MIPS_CCM
+ * select what is registered. GCM and CCM select CTR, so AES_MIPS_CTR_ASM
+ * is built with them. CBC-MAC is built with CCM.
  */
 
 #include <crypto/internal/skcipher.h>
@@ -55,6 +57,9 @@ static struct crypto_alg aes_mips_alg = {
 	},
 };
 
+#if defined(AES_MIPS_ECB) || defined(AES_MIPS_CBC) || defined(AES_MIPS_CTR)
+#define AES_MIPS_SKCIPHER 1
+
 static int aes_mips_sk_setkey(struct crypto_skcipher *tfm, const u8 *key,
 			      unsigned int len)
 {
@@ -79,7 +84,9 @@ static bool aes_mips_ranges_ok(const u8 *src, const u8 *dst, unsigned int len)
 		return src + len <= dst;
 	return dst + len <= src;
 }
+#endif
 
+#if defined(AES_MIPS_CBC) || defined(AES_MIPS_CTR)
 /* CBC and CTR update iv in place. An unaligned IV is copied and written back. */
 static u8 *aes_mips_iv_align(u8 *reqiv, u8 *scratch, bool *copied)
 {
@@ -90,7 +97,9 @@ static u8 *aes_mips_iv_align(u8 *reqiv, u8 *scratch, bool *copied)
 	*copied = true;
 	return scratch;
 }
+#endif
 
+#ifdef AES_MIPS_ECB
 /*
  * Direct call when the whole request is one aligned lowmem segment and the
  * ranges are equal or disjoint. Anything else returns -EAGAIN for the walk.
@@ -114,7 +123,9 @@ static int aes_mips_ecb_direct(struct skcipher_request *req, bool enc)
 		aes_mips_ecb_decrypt(ctx, dst, src, len >> 4);
 	return 0;
 }
+#endif
 
+#ifdef AES_MIPS_CBC
 static int aes_mips_cbc_direct(struct skcipher_request *req, bool enc)
 {
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
@@ -139,7 +150,9 @@ static int aes_mips_cbc_direct(struct skcipher_request *req, bool enc)
 		memcpy(req->iv, ivbuf, AES_BLOCK_SIZE);
 	return 0;
 }
+#endif
 
+#ifdef AES_MIPS_CTR
 static int aes_mips_ctr_direct(struct skcipher_request *req)
 {
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
@@ -175,7 +188,9 @@ static int aes_mips_ctr_direct(struct skcipher_request *req)
 		memcpy(req->iv, ivbuf, AES_BLOCK_SIZE);
 	return 0;
 }
+#endif
 
+#ifdef AES_MIPS_ECB
 static int aes_mips_ecb_run(struct skcipher_request *req, bool enc)
 {
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
@@ -212,7 +227,9 @@ static int aes_mips_ecb_dec(struct skcipher_request *req)
 {
 	return aes_mips_ecb_run(req, false);
 }
+#endif
 
+#ifdef AES_MIPS_CBC
 static int aes_mips_cbc_run(struct skcipher_request *req, bool enc)
 {
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
@@ -249,7 +266,9 @@ static int aes_mips_cbc_dec(struct skcipher_request *req)
 {
 	return aes_mips_cbc_run(req, false);
 }
+#endif
 
+#ifdef AES_MIPS_CTR
 static int aes_mips_ctr_run(struct skcipher_request *req)
 {
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
@@ -282,8 +301,11 @@ static int aes_mips_ctr_run(struct skcipher_request *req)
 	}
 	return err;
 }
+#endif
 
+#ifdef AES_MIPS_SKCIPHER
 static struct skcipher_alg aes_mips_skciphers[] = {
+#ifdef AES_MIPS_ECB
 	{
 		.setkey		= aes_mips_sk_setkey,
 		.encrypt	= aes_mips_ecb_enc,
@@ -302,6 +324,8 @@ static struct skcipher_alg aes_mips_skciphers[] = {
 			.cra_module		= THIS_MODULE,
 		},
 	},
+#endif
+#ifdef AES_MIPS_CBC
 	{
 		.setkey		= aes_mips_sk_setkey,
 		.encrypt	= aes_mips_cbc_enc,
@@ -320,6 +344,8 @@ static struct skcipher_alg aes_mips_skciphers[] = {
 			.cra_module		= THIS_MODULE,
 		},
 	},
+#endif
+#ifdef AES_MIPS_CTR
 	{
 		.setkey		= aes_mips_sk_setkey,
 		.encrypt	= aes_mips_ctr_run,
@@ -338,7 +364,9 @@ static struct skcipher_alg aes_mips_skciphers[] = {
 			.cra_module		= THIS_MODULE,
 		},
 	},
+#endif
 };
+#endif
 
 /* FIPS-197 Appendix C.1–C.3. */
 static const u8 aes_pt[AES_BLOCK_SIZE] = {
@@ -377,6 +405,7 @@ static const u8 aes256_ct[AES_BLOCK_SIZE] = {
 };
 
 /* SP 800-38A F.1.1 / F.2.1 / F.5.1, AES-128, four blocks. */
+#if defined(AES_MIPS_ECB) || defined(AES_MIPS_CBC) || defined(AES_MIPS_CTR_ASM)
 static const u8 sp_key[AES_KEYSIZE_128] = {
 	0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
 	0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c,
@@ -391,6 +420,7 @@ static const u8 sp_pt[64] = {
 	0xf6, 0x9f, 0x24, 0x45, 0xdf, 0x4f, 0x9b, 0x17,
 	0xad, 0x2b, 0x41, 0x7b, 0xe6, 0x6c, 0x37, 0x10,
 };
+#ifdef AES_MIPS_ECB
 static const u8 sp_ecb[64] = {
 	0x3a, 0xd7, 0x7b, 0xb4, 0x0d, 0x7a, 0x36, 0x60,
 	0xa8, 0x9e, 0xca, 0xf3, 0x24, 0x66, 0xef, 0x97,
@@ -401,6 +431,8 @@ static const u8 sp_ecb[64] = {
 	0x7b, 0x0c, 0x78, 0x5e, 0x27, 0xe8, 0xad, 0x3f,
 	0x82, 0x23, 0x20, 0x71, 0x04, 0x72, 0x5d, 0xd4,
 };
+#endif
+#ifdef AES_MIPS_CBC
 static const u8 sp_iv[AES_BLOCK_SIZE] = {
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -415,6 +447,8 @@ static const u8 sp_cbc[64] = {
 	0x3f, 0xf1, 0xca, 0xa1, 0x68, 0x1f, 0xac, 0x09,
 	0x12, 0x0e, 0xca, 0x30, 0x75, 0x86, 0xe1, 0xa7,
 };
+#endif
+#ifdef AES_MIPS_CTR_ASM
 static const u8 sp_ctr0[AES_BLOCK_SIZE] = {
 	0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
 	0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
@@ -429,6 +463,8 @@ static const u8 sp_ctr[64] = {
 	0x1e, 0x03, 0x1d, 0xda, 0x2f, 0xbe, 0x03, 0xd1,
 	0x79, 0x21, 0x70, 0xa0, 0xf3, 0x00, 0x9c, 0xee,
 };
+#endif
+#endif
 
 static int aes_mips_check_block(const u8 *key, unsigned int key_len,
 				const u8 *pt, const u8 *ct)
@@ -486,23 +522,33 @@ static int aes_mips_check_unaligned(void)
 	return err;
 }
 
+#if defined(AES_MIPS_ECB) || defined(AES_MIPS_CBC) || defined(AES_MIPS_CTR_ASM)
 static int aes_mips_check_modes(void)
 {
 	struct crypto_aes_ctx ctx;
-	u8 out[64], back[64], iv[AES_BLOCK_SIZE];
+	u8 out[64];
+#if defined(AES_MIPS_ECB) || defined(AES_MIPS_CTR_ASM)
+	u8 back[64];
+#endif
+#if defined(AES_MIPS_CBC) || defined(AES_MIPS_CTR_ASM)
+	u8 iv[AES_BLOCK_SIZE];
+#endif
 	int err;
 
 	err = aes_mips_setkey(&ctx, sp_key, sizeof(sp_key));
 	if (err)
 		return err;
 
+#ifdef AES_MIPS_ECB
 	aes_mips_ecb_encrypt(&ctx, out, sp_pt, 4);
 	if (memcmp(out, sp_ecb, sizeof(sp_ecb)))
 		return -EINVAL;
 	aes_mips_ecb_decrypt(&ctx, back, out, 4);
 	if (memcmp(back, sp_pt, sizeof(sp_pt)))
 		return -EINVAL;
+#endif
 
+#ifdef AES_MIPS_CBC
 	memcpy(iv, sp_iv, sizeof(iv));
 	aes_mips_cbc_encrypt(&ctx, out, sp_pt, 4, iv);
 	if (memcmp(out, sp_cbc, sizeof(sp_cbc)))
@@ -511,7 +557,9 @@ static int aes_mips_check_modes(void)
 	aes_mips_cbc_decrypt(&ctx, out, out, 4, iv);
 	if (memcmp(out, sp_pt, sizeof(sp_pt)))
 		return -EINVAL;
+#endif
 
+#ifdef AES_MIPS_CTR_ASM
 	memcpy(iv, sp_ctr0, sizeof(iv));
 	aes_mips_ctr_crypt(&ctx, out, sp_pt, 4, iv);
 	if (memcmp(out, sp_ctr, sizeof(sp_ctr)))
@@ -520,11 +568,14 @@ static int aes_mips_check_modes(void)
 	aes_mips_ctr_crypt(&ctx, back, out, 4, iv);
 	if (memcmp(back, sp_pt, sizeof(sp_pt)))
 		return -EINVAL;
+#endif
 
 	memzero_explicit(&ctx, sizeof(ctx));
 	return 0;
 }
+#endif
 
+#ifdef AES_MIPS_CTR_ASM
 /* Increment a big-endian counter by one block and compare with ECB. */
 static int aes_mips_check_ctr_carry(const u8 *start)
 {
@@ -606,12 +657,15 @@ static int aes_mips_check_ctr_span(const u8 *key, unsigned int key_len,
 	memzero_explicit(one, sizeof(one));
 	return err;
 }
+#endif
 
 static int aes_mips_selftest(void)
 {
 	struct crypto_aes_ctx ctx;
 	u8 short_key[15];
+#ifdef AES_MIPS_CTR_ASM
 	u8 ctr[AES_BLOCK_SIZE];
+#endif
 	int err;
 
 	err = aes_mips_check_block(aes128_key, sizeof(aes128_key),
@@ -641,12 +695,15 @@ static int aes_mips_selftest(void)
 		return err;
 	}
 
+#if defined(AES_MIPS_ECB) || defined(AES_MIPS_CBC) || defined(AES_MIPS_CTR_ASM)
 	err = aes_mips_check_modes();
 	if (err) {
 		pr_err("aes-mips: SP 800-38A failed\n");
 		return err;
 	}
+#endif
 
+#ifdef AES_MIPS_CTR_ASM
 	memset(ctr, 0, sizeof(ctr));
 	memset(ctr + 12, 0xff, 4);
 	err = aes_mips_check_ctr_carry(ctr);
@@ -714,6 +771,7 @@ static int aes_mips_selftest(void)
 			}
 		}
 	}
+#endif
 
 	memset(short_key, 0x11, sizeof(short_key));
 	err = aes_mips_setkey(&ctx, short_key, sizeof(short_key));
@@ -728,10 +786,14 @@ static int aes_mips_selftest(void)
 	return 0;
 }
 
+#ifdef AES_MIPS_GCM
 int __init gcm_aes_mips_register(void);
 void gcm_aes_mips_unregister(void);
+#endif
+#ifdef AES_MIPS_CCM
 int __init ccm_aes_mips_register(void);
 void __exit ccm_aes_mips_unregister(void);
+#endif
 
 #ifdef TOOLCHAIN_SUPPORTS_DSP
 extern u32 aes_mips_round_entry[6];
@@ -760,35 +822,54 @@ static int __init aes_mips_mod_init(void)
 	if (err)
 		return err;
 
+#ifdef AES_MIPS_SKCIPHER
 	err = crypto_register_skciphers(aes_mips_skciphers,
 					ARRAY_SIZE(aes_mips_skciphers));
 	if (err) {
 		crypto_unregister_alg(&aes_mips_alg);
 		return err;
 	}
+#endif
 
+#ifdef AES_MIPS_GCM
 	err = gcm_aes_mips_register();
 	if (err)
-		goto out_aes;
-
+		goto out_sk;
+#endif
+#ifdef AES_MIPS_CCM
 	err = ccm_aes_mips_register();
-	if (!err)
-		return 0;
+	if (err) {
+#ifdef AES_MIPS_GCM
+		gcm_aes_mips_unregister();
+#endif
+		goto out_sk;
+	}
+#endif
+	return 0;
 
-	gcm_aes_mips_unregister();
-out_aes:
+#if defined(AES_MIPS_GCM) || defined(AES_MIPS_CCM)
+out_sk:
+#ifdef AES_MIPS_SKCIPHER
 	crypto_unregister_skciphers(aes_mips_skciphers,
 				    ARRAY_SIZE(aes_mips_skciphers));
+#endif
 	crypto_unregister_alg(&aes_mips_alg);
 	return err;
+#endif
 }
 
 static void __exit aes_mips_mod_exit(void)
 {
+#ifdef AES_MIPS_CCM
 	ccm_aes_mips_unregister();
+#endif
+#ifdef AES_MIPS_GCM
 	gcm_aes_mips_unregister();
+#endif
+#ifdef AES_MIPS_SKCIPHER
 	crypto_unregister_skciphers(aes_mips_skciphers,
 				    ARRAY_SIZE(aes_mips_skciphers));
+#endif
 	crypto_unregister_alg(&aes_mips_alg);
 }
 
@@ -797,16 +878,42 @@ module_exit(aes_mips_mod_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Denis Iurev <denis.yuriev@icloud.com>");
-MODULE_INFO(description, "AES cipher, ECB/CBC/CTR, GCM and CCM for MIPS32r2");
+MODULE_INFO(description, "AES for MIPS32r2"
+#ifdef AES_MIPS_ECB
+	", ECB"
+#endif
+#ifdef AES_MIPS_CBC
+	", CBC"
+#endif
+#ifdef AES_MIPS_CTR
+	", CTR"
+#endif
+#ifdef AES_MIPS_GCM
+	", GCM"
+#endif
+#ifdef AES_MIPS_CCM
+	", CCM"
+#endif
+);
 MODULE_ALIAS_CRYPTO("aes");
-MODULE_ALIAS_CRYPTO("ecb(aes)");
-MODULE_ALIAS_CRYPTO("cbc(aes)");
-MODULE_ALIAS_CRYPTO("ctr(aes)");
 MODULE_ALIAS_CRYPTO("aes-mips");
+#ifdef AES_MIPS_ECB
+MODULE_ALIAS_CRYPTO("ecb(aes)");
 MODULE_ALIAS_CRYPTO("ecb-aes-mips");
+#endif
+#ifdef AES_MIPS_CBC
+MODULE_ALIAS_CRYPTO("cbc(aes)");
 MODULE_ALIAS_CRYPTO("cbc-aes-mips");
+#endif
+#ifdef AES_MIPS_CTR
+MODULE_ALIAS_CRYPTO("ctr(aes)");
 MODULE_ALIAS_CRYPTO("ctr-aes-mips");
+#endif
+#ifdef AES_MIPS_GCM
 MODULE_ALIAS_CRYPTO("gcm(aes)");
 MODULE_ALIAS_CRYPTO("gcm-aes-mips");
+#endif
+#ifdef AES_MIPS_CCM
 MODULE_ALIAS_CRYPTO("ccm(aes)");
 MODULE_ALIAS_CRYPTO("ccm-aes-mips");
+#endif

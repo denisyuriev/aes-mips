@@ -524,6 +524,7 @@ NESTED(aes_mips_ecb_decrypt, FRAMESZ, ra)
 	restore_frame
 END(aes_mips_ecb_decrypt)
 
+#ifdef AES_MIPS_CBC
 	/*
 	 * The IV is loaded into s0-s3 below. After the first block the
 	 * chain is the previous ciphertext, still in those registers.
@@ -558,7 +559,9 @@ NESTED(aes_mips_cbc_encrypt, FRAMESZ, ra)
 .Lcbc_enc_out:
 	restore_frame
 END(aes_mips_cbc_encrypt)
+#endif
 
+#ifdef AES_MIPS_CCM
 	/* Same chain as CBC encrypt. Ciphertext is not stored. */
 	.align	5
 NESTED(aes_mips_cbc_mac, FRAMESZ, ra)
@@ -589,7 +592,9 @@ NESTED(aes_mips_cbc_mac, FRAMESZ, ra)
 .Lcbc_mac_out:
 	restore_frame
 END(aes_mips_cbc_mac)
+#endif
 
+#ifdef AES_MIPS_CBC
 	/*
 	 * Last block first: block i takes its chain from src[i - 1], which is
 	 * still ciphertext even in place. Block 0 takes the IV. The last
@@ -646,7 +651,9 @@ NESTED(aes_mips_cbc_decrypt, FRAMESZ, ra)
 .Lcbc_dec_out:
 	restore_frame
 END(aes_mips_cbc_decrypt)
+#endif
 
+#ifdef AES_MIPS_CTR_ASM
 	/*
 	 * s4-s6 = counter words 0..2 (as loaded) ^ round key 0.
 	 * s7 = counter word 3 as loaded. A native word is already the
@@ -890,5 +897,6 @@ NESTED(aes_mips_ctr_crypt, FRAMESZ, ra)
 .Lctr_out:
 	restore_frame
 END(aes_mips_ctr_crypt)
+#endif
 
 	.set	pop

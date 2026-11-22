@@ -6,17 +6,59 @@ menu "Accelerated Cryptographic Algorithms for CPU (mips)"
 config CRYPTO_AES_MIPS32R2
 	tristate "Ciphers: AES (MIPS32r2)"
 	depends on CPU_MIPS32_R2
-	select CRYPTO_AEAD
+	select CRYPTO_AEAD if CRYPTO_AES_MIPS_GCM || CRYPTO_AES_MIPS_CCM
 	select CRYPTO_ALGAPI
-	select CRYPTO_SKCIPHER
+	select CRYPTO_SKCIPHER if CRYPTO_AES_MIPS_ECB || CRYPTO_AES_MIPS_CBC || CRYPTO_AES_MIPS_CTR
 	select CRYPTO_LIB_AES
 	help
-	  Block cipher AES (FIPS-197), length-preserving modes ECB, CBC
-	  and CTR, and AEAD GCM(AES) and CCM(AES) for MIPS32r2,
-	  little-endian or big-endian.
+	  Block cipher AES (FIPS-197) for MIPS32r2, little-endian or
+	  big-endian. The round uses Gladman T-tables. This
+	  implementation may be vulnerable to cache timing attacks.
 
-	  The round uses Gladman T-tables. This implementation may be
-	  vulnerable to cache timing attacks. GHASH uses 16 KiB when L1 D
-	  is at least 32 KiB, and 8 KiB otherwise.
+	  ECB, CBC, CTR, GCM and CCM are separate options below and are
+	  enabled by default. GCM and CCM select CTR. CCM also builds
+	  CBC-MAC. The cipher calls the ECB loop for one block, so that
+	  loop is always built.
+
+	  GHASH uses 16 KiB when L1 D is at least 32 KiB, and 8 KiB
+	  otherwise. Those tables are built only with GCM.
+
+if CRYPTO_AES_MIPS32R2
+
+config CRYPTO_AES_MIPS_ECB
+	bool "ECB"
+	default y
+	help
+	  Register skcipher ecb(aes) / ecb-aes-mips.
+
+config CRYPTO_AES_MIPS_CBC
+	bool "CBC"
+	default y
+	help
+	  Register skcipher cbc(aes) / cbc-aes-mips.
+
+config CRYPTO_AES_MIPS_CTR
+	bool "CTR"
+	default y
+	help
+	  Register skcipher ctr(aes) / ctr-aes-mips.
+
+config CRYPTO_AES_MIPS_GCM
+	bool "GCM"
+	default y
+	select CRYPTO_AES_MIPS_CTR
+	help
+	  Register AEAD gcm(aes) / gcm-aes-mips. Builds the GHASH
+	  tables. Selects CTR.
+
+config CRYPTO_AES_MIPS_CCM
+	bool "CCM"
+	default y
+	select CRYPTO_AES_MIPS_CTR
+	help
+	  Register AEAD ccm(aes) / ccm-aes-mips. Builds CBC-MAC.
+	  Selects CTR.
+
+endif
 
 endmenu

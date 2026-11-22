@@ -39,12 +39,12 @@ The module is not in the OpenWrt tree.
 
 This repository is an external feed. The package appears in `make menuconfig` only for these OpenWrt CPU types: `4kec`, `24kc`, `34kc`, `74kc`, `1004kc`, `mips32r2`.
 
-1. Add to `feeds.conf`:
+1. Add to `feeds.conf` (the feed name may not contain `-`):
 
-       src-git aes-mips https://github.com/denisyuriev/aes-mips.git
+       src-git aes_mips https://github.com/denisyuriev/aes-mips.git
 
-2. `./scripts/feeds update aes-mips`
-3. `./scripts/feeds install -p aes-mips -a`
+2. `./scripts/feeds update aes_mips`
+3. `./scripts/feeds install -p aes_mips -a`
 4. Select a MIPS32r2 target.
 5. Kernel modules → Cryptographic API modules → `kmod-aes-mips` as `<*>`.
 6. Build the image as usual.

@@ -39,12 +39,12 @@ GHASH — таблицы 16 КиБ при L1 D ≥ 32 КиБ, иначе 8 Ки�
 
 Этот репозиторий — внешний фид. Пакет появится в `make menuconfig` только для следующих типов CPU OpenWrt: `4kec`, `24kc`, `34kc`, `74kc`, `1004kc`, `mips32r2`.
 
-1. В `feeds.conf`:
+1. В `feeds.conf` (в имени ленты нельзя `-`):
 
-       src-git aes-mips https://github.com/denisyuriev/aes-mips.git
+       src-git aes_mips https://github.com/denisyuriev/aes-mips.git
 
-2. `./scripts/feeds update aes-mips`
-3. `./scripts/feeds install -p aes-mips -a`
+2. `./scripts/feeds update aes_mips`
+3. `./scripts/feeds install -p aes_mips -a`
 4. Выбрать цель MIPS32r2.
 5. Kernel modules → Cryptographic API modules → `kmod-aes-mips` в `<*>`.
 6. Собрать образ как обычно.

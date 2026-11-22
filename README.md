@@ -28,8 +28,28 @@ A small last-round AES tweak for DSPr1 (`LBUX`) when the ASE is present on the C
 Sources are meant for `arch/mips/crypto/` in the kernel tree. `Makefile` and `Kconfig` are in-tree style.
 
 First board: TP-Link Archer C6U v1, MediaTek MT7621 (MIPS 1004Kc little-endian).
+
 Second board: MikroTik RB951Ui-2HnD, Atheros AR9344 (MIPS 74Kc, big-endian).
+
 Both byte orders are also checked in qemu (`-M malta -cpu 24Kc`).
+
+## OpenWrt
+
+The module is not in the OpenWrt tree.
+
+This repository is an external feed. The package appears in `make menuconfig` only for these OpenWrt CPU types: `4kec`, `24kc`, `34kc`, `74kc`, `1004kc`, `mips32r2`.
+
+1. Add to `feeds.conf`:
+
+       src-git aes-mips https://github.com/denisyuriev/aes-mips.git
+
+2. `./scripts/feeds update aes-mips`
+3. `./scripts/feeds install -p aes-mips -a`
+4. Select a MIPS32r2 target.
+5. Kernel modules → Cryptographic API modules → `kmod-aes-mips` as `<*>`.
+6. Build the image as usual.
+
+`<*>` puts `aes-mips.ko` into the image. The module loads on boot. `/proc/crypto` then lists `aes-mips`, `ecb-aes-mips`, `cbc-aes-mips`, `ctr-aes-mips`, `gcm-aes-mips`, and `ccm-aes-mips`.
 
 ## Performance
 

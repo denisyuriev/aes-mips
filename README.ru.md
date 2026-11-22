@@ -28,8 +28,28 @@ GHASH — таблицы 16 КиБ при L1 D ≥ 32 КиБ, иначе 8 Ки�
 Исходники рассчитаны на `arch/mips/crypto/` в дереве ядра. `Makefile` и `Kconfig` — in-tree.
 
 Первый стенд — TP-Link Archer C6U v1, MediaTek MT7621 (MIPS 1004Kc, little-endian).
+
 Второй стенд — MikroTik RB951Ui-2HnD, Atheros AR9344 (MIPS 74Kc, big-endian).
+
 Матрица обоих порядков байт — qemu (`-M malta -cpu 24Kc`).
+
+## OpenWrt
+
+Модуля нет в дереве OpenWrt.
+
+Этот репозиторий — внешний фид. Пакет появится в `make menuconfig` только для следующих типов CPU OpenWrt: `4kec`, `24kc`, `34kc`, `74kc`, `1004kc`, `mips32r2`.
+
+1. В `feeds.conf`:
+
+       src-git aes-mips https://github.com/denisyuriev/aes-mips.git
+
+2. `./scripts/feeds update aes-mips`
+3. `./scripts/feeds install -p aes-mips -a`
+4. Выбрать цель MIPS32r2.
+5. Kernel modules → Cryptographic API modules → `kmod-aes-mips` в `<*>`.
+6. Собрать образ как обычно.
+
+`<*>` кладёт `aes-mips.ko` в образ. Модуль загружается при старте. В `/proc/crypto` появляются `aes-mips`, `ecb-aes-mips`, `cbc-aes-mips`, `ctr-aes-mips`, `gcm-aes-mips` и `ccm-aes-mips`.
 
 ## Скорость
 

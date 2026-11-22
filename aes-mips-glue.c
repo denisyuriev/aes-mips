@@ -797,7 +797,7 @@ module_exit(aes_mips_mod_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Denis Iurev <denis.yuriev@icloud.com>");
-MODULE_INFO(description, "AES cipher, ECB/CBC/CTR, GCM and CCM for MIPS 1004Kc");
+MODULE_INFO(description, "AES cipher, ECB/CBC/CTR, GCM and CCM for MIPS32r2");
 MODULE_ALIAS_CRYPTO("aes");
 MODULE_ALIAS_CRYPTO("ecb(aes)");
 MODULE_ALIAS_CRYPTO("cbc(aes)");

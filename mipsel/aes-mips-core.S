@@ -26,7 +26,7 @@
  * round loads the S-box byte at +1 inside ft, or byte 0 of the fifth plane
  * of it (the inverse S-box), through the same t0-t3.
  *
- * Core (aes_enc_rounds / aes_dec_rounds, entered with jalr t9):
+ * Core (aes_enc_rounds / aes_dec_rounds, entered with jalr t9 or bal):
  *   in   s0-s3 whitened state, t0-t3 table base, t4 key cursor
  *   out  s0-s3
  *   uses $1, v0, v1, t5-t8
@@ -37,18 +37,20 @@
  * a big-endian integer incremented in place. A wrap of s7 carries into
  * words 2, 1, 0 and rebuilds s4-s6. Byte 15 is bits 7:0 of s7, so a
  * run of 256 blocks changes only that byte and CTR skips the first two
- * rounds, entering at t9+512. s8 is the IV pointer on the slow path
- * and round-key byte 15 on that run; the pointer is saved.
+ * rounds. The fast loop is a copy per key length and enters at a
+ * label (.Le192, .Le128 or .Le128_r2) with bal. One indirect jump per
+ * run selects the copy. s8 is the IV pointer on the slow path and
+ * round-key byte 15 on that run; the pointer is saved.
  * Blocks are 4-byte aligned. The last round has a DSP r1 copy (lbux);
  * init points the entry table at it when the CPU has DSP. No FPU, no
- * $gp, no $k0/$k1, no HI/LO. The first two rounds of that copy stay the
- * same 512 bytes: CTR adds 512 to whichever entry it loaded.
+ * $gp, no $k0/$k1, no HI/LO. The first two rounds of each body stay
+ * 512 bytes, so the fast-loop labels land where t9+512 used to.
  */
 
 #include <asm/asm.h>
 #include <asm/regdef.h>
 
-.equ	FRAMESZ, 64
+.equ	FRAMESZ, 72
 .equ	OFF_RA, 36
 .equ	OFF_CL, 40
 /* CTR only. CBC uses OFF_CL for the saved ciphertext block. */
@@ -58,6 +60,8 @@
 .equ	OFF_I2, 52
 .equ	OFF_IV, 56
 .equ	OFF_Z3, 60
+/* CTR fast-loop entry, or the CBC-MAC loop entry. Not key material. */
+.equ	OFF_FAST, 64
 
 	.macro	save_frame
 	addiu	sp, sp, -FRAMESZ
@@ -174,34 +178,45 @@
 
 	/*
 	 * a0 = ctx on entry. Leaves a0 = schedule (ctx + koff), t4 = key cursor,
-	 * t9 = round entry for the key length.
+	 * t9 = round entry for the key length. fast, when not 0, is the byte
+	 * offset of the AES-256 word of a second triple (the CTR loop or the
+	 * CBC-MAC loop). The word for this key length is stored at OFF_FAST(sp).
 	 *
-	 * slot is 0 for encryption and 12 for decryption. The six words at
-	 * aes_mips_round_entry are the round entries; init points them at the
-	 * DSP copies when the CPU has DSP r1.
+	 * slot is 0 for encryption and 12 for decryption. Twelve words at
+	 * aes_mips_round_entry: six round entries, three CTR loop entries,
+	 * three CBC-MAC loop entries. A mode that is not built stores 0.
+	 * init copies the DSP table over this one when the CPU has DSP r1.
 	 */
-	.macro	pick_entry koff, slot
+	.macro	pick_entry koff, slot, fast=0
 	lw	v0, 480(a0)
 	addiu	a0, a0, \koff
+	lui	t9, %hi(aes_mips_round_entry)
+	addiu	t9, t9, %lo(aes_mips_round_entry)
 	sltiu	v1, v0, 17
 	bnez	v1, 101f
 	sltiu	v1, v0, 25
 	bnez	v1, 102f
 	nop
-	lui	t9, %hi(aes_mips_round_entry)
-	addiu	t9, t9, %lo(aes_mips_round_entry)
+	.if	\fast
+	lw	v1, \fast+0(t9)
+	sw	v1, OFF_FAST(sp)
+	.endif
 	lw	t9, \slot+0(t9)
 	b	103f
 	move	t4, a0
 102:
-	lui	t9, %hi(aes_mips_round_entry)
-	addiu	t9, t9, %lo(aes_mips_round_entry)
+	.if	\fast
+	lw	v1, \fast+4(t9)
+	sw	v1, OFF_FAST(sp)
+	.endif
 	lw	t9, \slot+4(t9)
 	b	103f
 	addiu	t4, a0, -32
 101:
-	lui	t9, %hi(aes_mips_round_entry)
-	addiu	t9, t9, %lo(aes_mips_round_entry)
+	.if	\fast
+	lw	v1, \fast+8(t9)
+	sw	v1, OFF_FAST(sp)
+	.endif
 	lw	t9, \slot+8(t9)
 	addiu	t4, a0, -64
 103:
@@ -315,6 +330,7 @@ aes_enc_rounds:
 .Le128:
 	enc_round s0, s1, s2, s3, t5, t6, t7, t8, 4
 	enc_round t5, t6, t7, t8, s0, s1, s2, s3, 5
+.Le128_r2:
 	enc_round s0, s1, s2, s3, t5, t6, t7, t8, 6
 	enc_round t5, t6, t7, t8, s0, s1, s2, s3, 7
 	enc_round s0, s1, s2, s3, t5, t6, t7, t8, 8
@@ -363,6 +379,7 @@ aes_enc_rounds_dsp:
 .Le128d:
 	enc_round s0, s1, s2, s3, t5, t6, t7, t8, 4
 	enc_round t5, t6, t7, t8, s0, s1, s2, s3, 5
+.Le128d_r2:
 	enc_round s0, s1, s2, s3, t5, t6, t7, t8, 6
 	enc_round t5, t6, t7, t8, s0, s1, s2, s3, 7
 	enc_round s0, s1, s2, s3, t5, t6, t7, t8, 8
@@ -445,6 +462,24 @@ aes_mips_round_entry:
 	.word	.Ld256
 	.word	.Ld192
 	.word	.Ld128
+#ifdef AES_MIPS_CTR_ASM
+	.word	.Lctr_fast256
+	.word	.Lctr_fast192
+	.word	.Lctr_fast128
+#else
+	.word	0
+	.word	0
+	.word	0
+#endif
+#ifdef AES_MIPS_CCM
+	.word	.Lmac256
+	.word	.Lmac192
+	.word	.Lmac128
+#else
+	.word	0
+	.word	0
+	.word	0
+#endif
 #ifdef TOOLCHAIN_SUPPORTS_DSP
 	.globl	aes_mips_round_entry_dsp
 aes_mips_round_entry_dsp:
@@ -454,6 +489,24 @@ aes_mips_round_entry_dsp:
 	.word	.Ld256d
 	.word	.Ld192d
 	.word	.Ld128d
+#ifdef AES_MIPS_CTR_ASM
+	.word	.Lctr_fast256d
+	.word	.Lctr_fast192d
+	.word	.Lctr_fast128d
+#else
+	.word	0
+	.word	0
+	.word	0
+#endif
+#ifdef AES_MIPS_CCM
+	.word	.Lmac256d
+	.word	.Lmac192d
+	.word	.Lmac128d
+#else
+	.word	0
+	.word	0
+	.word	0
+#endif
 #endif
 	.text
 
@@ -558,13 +611,34 @@ END(aes_mips_cbc_encrypt)
 #endif
 
 #ifdef AES_MIPS_CCM
+	/*
+	 * One copy per key length. bal is predicted; the indirect jump that
+	 * picks the copy runs once per call. The bne slot stays empty: filling
+	 * it would move the source pointer or the prefetch address.
+	 */
+	.macro	mac_loop target
+.Lml_\@:
+	pref_fwd
+	xor_mem	a2, 0
+	xor	s0, s0, s4
+	xor	s1, s1, s5
+	xor	s2, s2, s6
+	bal	\target
+	xor	s3, s3, s7
+	addiu	a2, a2, 16
+	bne	a2, a3, .Lml_\@
+	nop
+	b	.Lcbc_mac_store
+	nop
+	.endm
+
 	/* Same chain as CBC encrypt. Ciphertext is not stored. */
 	.align	5
 NESTED(aes_mips_cbc_mac, FRAMESZ, ra)
 	save_frame
 	beqz	a3, .Lcbc_mac_out
 	move	s8, a1
-	pick_entry 0, 0
+	pick_entry 0, 0, 36
 	load_round0_key
 	load_tables aes_mips_ft_tab
 	sll	a3, a3, 4
@@ -573,22 +647,30 @@ NESTED(aes_mips_cbc_mac, FRAMESZ, ra)
 	lw	s1, 4(s8)
 	lw	s2, 8(s8)
 	lw	s3, 12(s8)
-.Lcbc_mac_loop:
-	pref_fwd
-	xor_mem	a2, 0
-	xor	s0, s0, s4
-	xor	s1, s1, s5
-	xor	s2, s2, s6
-	jalr	t9
-	xor	s3, s3, s7
-	addiu	a2, a2, 16
-	bne	a2, a3, .Lcbc_mac_loop
+	lw	v0, OFF_FAST(sp)
+	jr	v0
 	nop
+.Lmac256:
+	mac_loop .Le256
+.Lmac192:
+	mac_loop .Le192
+.Lmac128:
+	mac_loop .Le128
+#ifdef TOOLCHAIN_SUPPORTS_DSP
+.Lmac256d:
+	mac_loop .Le256d
+.Lmac192d:
+	mac_loop .Le192d
+.Lmac128d:
+	mac_loop .Le128d
+#endif
+.Lcbc_mac_store:
 	store_block s8
 .Lcbc_mac_out:
 	restore_frame
 END(aes_mips_cbc_mac)
 #endif
+
 
 #ifdef AES_MIPS_CBC
 	/*
@@ -657,12 +739,13 @@ END(aes_mips_cbc_decrypt)
 	 *
 	 * Byte 15 is bits 7:0 of s7. It is the only counter byte that
 	 * changes inside a run of 256 blocks, so rounds 1 and 2 collapse to
-	 * one T3 lookup and four more. t9 then points 512 bytes past the
-	 * key-length entry (two rounds of 64 instructions). Fewer than two
-	 * blocks left in the request or in the run stay on the full entry.
-	 * Across that run a0/s4-s6/s8 hold X0/Z0-Z2/K; the schedule, the
-	 * whitened words and the IV pointer sit in the frame. Z3 is loaded
-	 * per block.
+	 * one T3 lookup and four more. The run enters a per-key copy of the
+	 * loop and that copy branches to the label two rounds in (.Le192,
+	 * .Le128 or .Le128_r2). Fewer than two blocks left in the request or
+	 * in the run stay on the full entry, jalr t9. Across that run
+	 * a0/s4-s6/s8 hold X0/Z0-Z2/K; the schedule, the whitened words, the
+	 * IV pointer and the loop entry sit in the frame. Z3 is loaded per
+	 * block.
 	 */
 	.macro	ctr_carry sreg, koff
 	lw	v1, \koff(a0)
@@ -690,12 +773,48 @@ END(aes_mips_cbc_decrypt)
 	sw	v0, 12(a1)
 	.endm
 
+	.macro	ctr_fast target
+.Lcf_\@:
+	pref_fwd
+	lw	t8, OFF_Z3(sp)
+	andi	v0, s7, 0xff
+	xor	v0, v0, s8
+	ins	t3, v0, 2, 8
+	lw	v0, 3072(t3)
+	xor	v0, v0, a0
+	ins	t0, v0, 2, 8
+	srl	$1, v0, 8
+	ins	t1, $1, 2, 8
+	srl	$1, v0, 16
+	ins	t2, $1, 2, 8
+	srl	v0, v0, 24
+	ins	t3, v0, 2, 8
+	lw	s0, 0(t0)
+	lw	s1, 3072(t3)
+	lw	s2, 2048(t2)
+	lw	s3, 1024(t1)
+	xor	s0, s0, s4
+	xor	s1, s1, s5
+	xor	s2, s2, s6
+	bal	\target
+	xor	s3, s3, t8
+	ctr_store
+	addiu	s7, s7, 1
+	andi	v0, s7, 0xff
+	beqz	v0, .Lfast_wrap
+	addiu	a2, a2, 16
+	bne	a2, a3, .Lcf_\@
+	addiu	a1, a1, 16
+	b	.Lctr_finish
+	nop
+	.endm
+
 	.align	5
 NESTED(aes_mips_ctr_crypt, FRAMESZ, ra)
 	save_frame
 	beqz	a3, .Lctr_out
 	lw	s8, FRAMESZ+16(sp)
-	pick_entry 0, 0
+	pick_entry 0, 0, 24
 	load_tables aes_mips_ft_tab
 	sll	a3, a3, 4
 	addu	a3, a2, a3
@@ -834,47 +953,29 @@ NESTED(aes_mips_ctr_crypt, FRAMESZ, ra)
 	xor	t8, t8, v0
 	sw	t8, OFF_Z3(sp)
 	move	a0, s1
-	addiu	t9, t9, 512
-.Lfast:
-	pref_fwd
-	lw	t8, OFF_Z3(sp)
-	andi	v0, s7, 0xff
-	xor	v0, v0, s8
-	ins	t3, v0, 2, 8
-	lw	v0, 3072(t3)
-	xor	v0, v0, a0
-	ins	t0, v0, 2, 8
-	srl	$1, v0, 8
-	ins	t1, $1, 2, 8
-	srl	$1, v0, 16
-	ins	t2, $1, 2, 8
-	srl	v0, v0, 24
-	ins	t3, v0, 2, 8
-	lw	s0, 0(t0)
-	lw	s1, 3072(t3)
-	lw	s2, 2048(t2)
-	lw	s3, 1024(t1)
-	xor	s0, s0, s4
-	xor	s1, s1, s5
-	xor	s2, s2, s6
-	jalr	t9
-	xor	s3, s3, t8
-	ctr_store
-	addiu	s7, s7, 1
-	andi	v0, s7, 0xff
-	beqz	v0, .Lfast_wrap
-	addiu	a2, a2, 16
-	bne	a2, a3, .Lfast
-	addiu	a1, a1, 16
-	b	.Lctr_finish
+	lw	v0, OFF_FAST(sp)
+	jr	v0
 	nop
+.Lctr_fast256:
+	ctr_fast .Le192
+.Lctr_fast192:
+	ctr_fast .Le128
+.Lctr_fast128:
+	ctr_fast .Le128_r2
+#ifdef TOOLCHAIN_SUPPORTS_DSP
+.Lctr_fast256d:
+	ctr_fast .Le192d
+.Lctr_fast192d:
+	ctr_fast .Le128d
+.Lctr_fast128d:
+	ctr_fast .Le128d_r2
+#endif
 .Lfast_wrap:
 	addiu	a1, a1, 16
 	lw	a0, OFF_A0(sp)
 	lw	s4, OFF_I0(sp)
 	lw	s5, OFF_I1(sp)
 	lw	s6, OFF_I2(sp)
-	addiu	t9, t9, -512
 	beqz	s7, .Lctr_carry
 	nop
 	bne	a2, a3, .Lctr_dispatch

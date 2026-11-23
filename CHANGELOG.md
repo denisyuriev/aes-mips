@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-23
+
+CBC-MAC and the fast CTR loop call the AES rounds with `bal` on a label, one copy per key length and per body (base and DSP r1). One indirect jump per call picks the copy. A single block stays on `jalr`. A partial CCM block goes through `aes_mips_cbc_mac` too. On the 74Kc, AES-128 CTR at 1420 bytes is 24.2 MB/s (+2.3% over the previous build) and CCM (`rfc4309`) is 10.6 (+1.9%). On the MT7621 the same points are +0.8% and +1.1%.
+
 ## 2026-11-22
 
 OpenWrt feed in this repository. `kmod-crypto-aes-mips` shows up in `make menuconfig` on any MIPS32r2 target (`4kec`, `24kc`, `34kc`, `74kc`, `1004kc`, `mips32r2`), little-endian or big-endian. The module is built out of tree; the OpenWrt kernel tree is not patched.

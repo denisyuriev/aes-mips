@@ -659,6 +659,50 @@ static int aes_mips_check_ctr_span(const u8 *key, unsigned int key_len,
 }
 #endif
 
+#ifdef AES_MIPS_CCM
+/* One block and four, against a chain of aes_mips_encrypt. */
+static int aes_mips_check_cbc_mac(const u8 *key, unsigned int key_len,
+				  const char *name)
+{
+	struct crypto_aes_ctx ctx;
+	u8 pt[AES_BLOCK_SIZE * 4] __aligned(4);
+	u8 state[AES_BLOCK_SIZE] __aligned(4);
+	u8 expect[AES_BLOCK_SIZE] __aligned(4);
+	u8 block[AES_BLOCK_SIZE] __aligned(4);
+	unsigned int n, i, b;
+	int err;
+
+	err = aes_mips_setkey(&ctx, key, key_len);
+	if (err)
+		return err;
+	for (i = 0; i < sizeof(pt); i++)
+		pt[i] = (u8)(i * 17 + 3);
+
+	for (n = 1; n <= 4; n += 3) {
+		memset(state, 0x5a, sizeof(state));
+		memcpy(expect, state, sizeof(expect));
+		aes_mips_cbc_mac(&ctx, state, pt, n);
+		for (i = 0; i < n; i++) {
+			for (b = 0; b < AES_BLOCK_SIZE; b++)
+				block[b] = expect[b] ^ pt[i * AES_BLOCK_SIZE + b];
+			aes_mips_encrypt(&ctx, expect, block);
+		}
+		if (memcmp(state, expect, AES_BLOCK_SIZE)) {
+			pr_err("aes-mips: CBC-MAC AES-%s %u blocks failed\n",
+			       name, n);
+			err = -EINVAL;
+			break;
+		}
+	}
+
+	memzero_explicit(&ctx, sizeof(ctx));
+	memzero_explicit(state, sizeof(state));
+	memzero_explicit(expect, sizeof(expect));
+	memzero_explicit(block, sizeof(block));
+	return err;
+}
+#endif
+
 static int aes_mips_selftest(void)
 {
 	struct crypto_aes_ctx ctx;
@@ -773,6 +817,18 @@ static int aes_mips_selftest(void)
 	}
 #endif
 
+#ifdef AES_MIPS_CCM
+	err = aes_mips_check_cbc_mac(aes128_key, sizeof(aes128_key), "128");
+	if (err)
+		return err;
+	err = aes_mips_check_cbc_mac(aes192_key, sizeof(aes192_key), "192");
+	if (err)
+		return err;
+	err = aes_mips_check_cbc_mac(aes256_key, sizeof(aes256_key), "256");
+	if (err)
+		return err;
+#endif
+
 	memset(short_key, 0x11, sizeof(short_key));
 	err = aes_mips_setkey(&ctx, short_key, sizeof(short_key));
 	memzero_explicit(&ctx, sizeof(ctx));
@@ -796,8 +852,8 @@ void __exit ccm_aes_mips_unregister(void);
 #endif
 
 #ifdef TOOLCHAIN_SUPPORTS_DSP
-extern u32 aes_mips_round_entry[6];
-extern u32 aes_mips_round_entry_dsp[6];
+extern u32 aes_mips_round_entry[12];
+extern u32 aes_mips_round_entry_dsp[12];
 #endif
 
 static int __init aes_mips_mod_init(void)

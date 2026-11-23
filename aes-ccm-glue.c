@@ -3,8 +3,8 @@
  * Copyright (C) 2026 Denis Iurev <denis.yuriev@icloud.com>
  *
  * AES-CCM for MIPS32r2, little-endian or big-endian.
- * The keystream is aes_mips_ctr_crypt. Full blocks of CBC-MAC are
- * aes_mips_cbc_mac. B0 and a partial block stay on aes_mips_encrypt.
+ * The keystream is aes_mips_ctr_crypt. CBC-MAC, including a partial
+ * block, is aes_mips_cbc_mac. B0 stays on aes_mips_encrypt.
  * RFC 4309 stays the kernel template and picks this ccm(aes) when
  * it has the higher priority.
  */
@@ -88,12 +88,7 @@ static unsigned int format_adata(u8 adata[6], unsigned int a)
 static void mac_block(const struct crypto_aes_ctx *aes, u8 state[AES_BLOCK_SIZE],
 		      const u8 block[AES_BLOCK_SIZE])
 {
-	u8 tmp[AES_BLOCK_SIZE] __aligned(4);
-
-	memcpy(tmp, block, AES_BLOCK_SIZE);
-	crypto_xor(tmp, state, AES_BLOCK_SIZE);
-	aes_mips_encrypt(aes, state, tmp);
-	memzero_explicit(tmp, sizeof(tmp));
+	aes_mips_cbc_mac(aes, state, block, 1);
 }
 
 static void mac_init(struct mac_acc *m, const struct crypto_aes_ctx *aes,

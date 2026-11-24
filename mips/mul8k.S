@@ -18,10 +18,10 @@
  * DSP does not shorten this: the shifts cross a halfword, and lwx
  * cannot serve the other three words of the row.
  *
- * The blocks entry folds the last half into s0-s3. The next source
- * block is prefetched only when its 32-byte line lies inside the
- * source buffer. The one-block leaf does not prefetch: the accumulator
- * is 16 bytes.
+ * The blocks entry folds the last half into s0-s3. pref 0 of the next
+ * block has no bounds check: hint 0 does not fault on 4K, 24K, 74K and
+ * 1004K. The one-block leaf does not prefetch: the accumulator is 16
+ * bytes.
  *
  * ghash_mips_mul_8k(acc, tab)
  * ghash_mips_mul_8k_blocks(acc, tab, src, nblocks)  nblocks >= 2, src aligned 4

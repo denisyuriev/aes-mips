@@ -15,7 +15,6 @@
 #include <crypto/scatterwalk.h>
 #include <crypto/utils.h>
 #include <linux/align.h>
-#include <linux/err.h>
 #include <linux/highmem.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -56,11 +55,7 @@ static int format_b0(u8 b0[AES_BLOCK_SIZE], const u8 iv[AES_BLOCK_SIZE],
 		     unsigned int authsize, unsigned int assoclen,
 		     unsigned int cryptlen)
 {
-	unsigned int l;
-
-	if (iv[0] < 1 || iv[0] > 7)
-		return -EINVAL;
-	l = iv[0] + 1;
+	unsigned int l = iv[0] + 1;
 
 	memcpy(b0, iv, AES_BLOCK_SIZE);
 	b0[0] |= 8 * ((authsize - 2) / 2);
@@ -156,47 +151,6 @@ static int mac_sg(struct mac_acc *m, const struct crypto_aes_ctx *aes,
 		if (len && !sg)
 			return -EINVAL;
 	}
-	return 0;
-}
-
-static int ctr_sg(const struct crypto_aes_ctx *aes,
-		  struct scatterlist *ssg, unsigned int sskip,
-		  struct scatterlist *dsg, unsigned int dskip,
-		  unsigned int len, u8 ctr[AES_BLOCK_SIZE])
-{
-	struct ctr_ks ks = {};
-
-	if (!len)
-		return 0;
-	if (sg_at(ssg, sskip, &ssg, &sskip) || sg_at(dsg, dskip, &dsg, &dskip))
-		return -EINVAL;
-
-	while (len) {
-		unsigned int n = min3(len, ssg->length - sskip, dsg->length - dskip);
-		void *spage = kmap_local_page(sg_page(ssg));
-		void *dpage = kmap_local_page(sg_page(dsg));
-
-		ctr_crypt(aes, dpage + dsg->offset + dskip,
-			  spage + ssg->offset + sskip, n, ctr, &ks);
-		kunmap_local(dpage);
-		kunmap_local(spage);
-		len -= n;
-		sskip += n;
-		dskip += n;
-		if (sskip == ssg->length) {
-			ssg = sg_next(ssg);
-			sskip = 0;
-		}
-		if (dskip == dsg->length) {
-			dsg = sg_next(dsg);
-			dskip = 0;
-		}
-		if (len && (!ssg || !dsg)) {
-			memzero_explicit(&ks, sizeof(ks));
-			return -EINVAL;
-		}
-	}
-	memzero_explicit(&ks, sizeof(ks));
 	return 0;
 }
 

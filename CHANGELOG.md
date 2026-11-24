@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-24
+
+GCM and CCM share one CTR scatterlist walk in `aes-ctr-walk.c`; the duplicated `ctr_sg` and the former inline helpers leave the glue. `AES_MIPS_CTR_ASM` follows CTR alone (GCM and CCM still select CTR). Big-endian T-tables are swapped once in `aes_mips_mod_init` before the selftest, not lazily on the first setkey. The CTR fast path no longer spills `s4`–`s6` again in `.Lprecompute`: the prologue already keeps them.
+
 ## 2026-11-23
 
 CBC-MAC and the fast CTR loop call the AES rounds with `bal` on a label, one copy per key length and per body (base and DSP r1). One indirect jump per call picks the copy. A single block stays on `jalr`. A partial CCM block goes through `aes_mips_cbc_mac` too. On the 74Kc, AES-128 CTR at 1420 bytes is 24.2 MB/s (+2.3% over the previous build) and CCM (`rfc4309`) is 10.6 (+1.9%). On the MT7621 the same points are +0.8% and +1.1%.

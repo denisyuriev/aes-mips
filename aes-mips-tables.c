@@ -672,8 +672,9 @@ u32 aes_mips_it_tab[5][256] __aligned(1024) __used = {
 #ifdef __MIPSEB__
 /*
  * Gladman words keep AES byte 0 in the low 8 bits. A big-endian lw of a
- * block has that byte in bits 31:24, so the planes are reversed once and
- * each expanded key is reversed here. The round then uses plain lw/sw.
+ * block has that byte in bits 31:24. aes_mips_be_tables() reverses the
+ * planes once, before the first setkey. setkey reverses each expanded
+ * key. The round then uses plain lw/sw.
  */
 static void aes_mips_swab_words(u32 *w, unsigned int n)
 {
@@ -683,15 +684,10 @@ static void aes_mips_swab_words(u32 *w, unsigned int n)
 		w[i] = swab32(w[i]);
 }
 
-static void aes_mips_be_tables(void)
+void aes_mips_be_tables(void)
 {
-	static bool done;
-
-	if (done)
-		return;
 	aes_mips_swab_words(&aes_mips_ft_tab[0][0], 4 * 256);
 	aes_mips_swab_words(&aes_mips_it_tab[0][0], 5 * 256);
-	done = true;
 }
 #endif
 
@@ -700,9 +696,6 @@ int aes_mips_setkey(struct crypto_aes_ctx *ctx, const u8 *in_key,
 {
 	int err;
 
-#ifdef __MIPSEB__
-	aes_mips_be_tables();
-#endif
 	err = aes_expandkey(ctx, in_key, key_len);
 	if (err)
 		return err;

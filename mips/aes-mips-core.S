@@ -6,8 +6,9 @@
  *
  * A native lw has AES byte 0 in bits 31:24. The free ins therefore
  * indexes byte 3 (plane T3). Planes and the key schedule are stored
- * with that same lane order: aes_mips_setkey byte-swaps the expanded
- * key, and the tables are swapped once. Block, IV and CTR words are
+ * with that same lane order: aes_mips_be_tables swaps the planes once
+ * before the first setkey, and aes_mips_setkey byte-swaps the expanded
+ * key. Block, IV and CTR words are
  * plain lw/sw. The CTR counter word is already a big-endian integer.
  *
  * One issue, in-order, IPC close to 1: speed is the instruction count.
@@ -880,12 +881,10 @@ NESTED(aes_mips_ctr_crypt, FRAMESZ, ra)
 	 * round-1 columns 1-3. X0 is column 0 without T3[byte 15].
 	 * Z0-Z3 are round-2 columns with the one lookup that depends on
 	 * that byte left out. K, the key's byte 15, is the low byte of
-	 * that key word and is kept in s8.
+	 * that key word and is kept in s8. s4-s6 already match OFF_I0..I2:
+	 * the prologue, .Lcarry_spill and .Lfast_wrap keep them.
 	 */
 .Lprecompute:
-	sw	s4, OFF_I0(sp)
-	sw	s5, OFF_I1(sp)
-	sw	s6, OFF_I2(sp)
 	lw	v1, 12(a0)
 	xor	s0, s7, v1
 	andi	s8, v1, 0xff

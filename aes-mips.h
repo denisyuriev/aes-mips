@@ -19,6 +19,18 @@
  * cbc decrypt accepts dst == src.
  */
 
+/*
+ * Big-endian lw stores AES byte 0 in bits 31:24. Call this once before the
+ * first aes_mips_setkey. A second call swaps the planes back.
+ */
+#ifdef __MIPSEB__
+void aes_mips_be_tables(void);
+#else
+static inline void aes_mips_be_tables(void)
+{
+}
+#endif
+
 int aes_mips_setkey(struct crypto_aes_ctx *ctx, const u8 *in_key,
 		    unsigned int key_len);
 void aes_mips_encrypt(const struct crypto_aes_ctx *ctx, u8 *out, const u8 *in);

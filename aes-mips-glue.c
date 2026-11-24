@@ -860,6 +860,7 @@ static int __init aes_mips_mod_init(void)
 {
 	int err;
 
+	aes_mips_be_tables();
 	err = aes_mips_selftest();
 	if (err)
 		return err;

@@ -13,7 +13,6 @@
 #include <crypto/internal/aead.h>
 #include <crypto/scatterwalk.h>
 #include <linux/align.h>
-#include <linux/err.h>
 #include <linux/gfp.h>
 #include <linux/highmem.h>
 #include <linux/init.h>
@@ -88,47 +87,6 @@ static int ghash_sg(struct ghash_acc *acc, const void *tab, unsigned int kib,
 		if (len && !sg)
 			return -EINVAL;
 	}
-	return 0;
-}
-
-static int ctr_sg(const struct crypto_aes_ctx *aes,
-		  struct scatterlist *ssg, unsigned int sskip,
-		  struct scatterlist *dsg, unsigned int dskip,
-		  unsigned int len, u8 ctr[AES_BLOCK_SIZE])
-{
-	struct ctr_ks ks = {};
-
-	if (!len)
-		return 0;
-	if (sg_at(ssg, sskip, &ssg, &sskip) || sg_at(dsg, dskip, &dsg, &dskip))
-		return -EINVAL;
-
-	while (len) {
-		unsigned int n = min3(len, ssg->length - sskip, dsg->length - dskip);
-		void *spage = kmap_local_page(sg_page(ssg));
-		void *dpage = kmap_local_page(sg_page(dsg));
-
-		ctr_crypt(aes, dpage + dsg->offset + dskip,
-			  spage + ssg->offset + sskip, n, ctr, &ks);
-		kunmap_local(dpage);
-		kunmap_local(spage);
-		len -= n;
-		sskip += n;
-		dskip += n;
-		if (sskip == ssg->length) {
-			ssg = sg_next(ssg);
-			sskip = 0;
-		}
-		if (dskip == dsg->length) {
-			dsg = sg_next(dsg);
-			dskip = 0;
-		}
-		if (len && (!ssg || !dsg)) {
-			memzero_explicit(&ks, sizeof(ks));
-			return -EINVAL;
-		}
-	}
-	memzero_explicit(&ks, sizeof(ks));
 	return 0;
 }
 

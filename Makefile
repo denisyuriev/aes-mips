@@ -23,15 +23,13 @@ aes-mips-defs += -DAES_MIPS_CBC
 endif
 ifeq ($(CONFIG_CRYPTO_AES_MIPS_CTR),y)
 aes-mips-defs += -DAES_MIPS_CTR
+aes-mips-defs += -DAES_MIPS_CTR_ASM
 endif
 ifeq ($(CONFIG_CRYPTO_AES_MIPS_GCM),y)
 aes-mips-defs += -DAES_MIPS_GCM
 endif
 ifeq ($(CONFIG_CRYPTO_AES_MIPS_CCM),y)
 aes-mips-defs += -DAES_MIPS_CCM
-endif
-ifneq ($(filter y,$(CONFIG_CRYPTO_AES_MIPS_CTR) $(CONFIG_CRYPTO_AES_MIPS_GCM) $(CONFIG_CRYPTO_AES_MIPS_CCM)),)
-aes-mips-defs += -DAES_MIPS_CTR_ASM
 endif
 ccflags-y += $(aes-mips-defs)
 asflags-y += $(aes-mips-defs)
@@ -43,6 +41,9 @@ obj-$(CONFIG_CRYPTO_AES_MIPS32R2) += aes-mips.o
 aes-mips-y := aes-mips-tables.o aes-mips-glue.o
 aes-mips-$(CONFIG_CRYPTO_AES_MIPS_GCM) += aes-gcm-glue.o ghash-tab.o
 aes-mips-$(CONFIG_CRYPTO_AES_MIPS_CCM) += aes-ccm-glue.o
+ifneq ($(filter y,$(CONFIG_CRYPTO_AES_MIPS_GCM) $(CONFIG_CRYPTO_AES_MIPS_CCM)),)
+aes-mips-y += aes-ctr-walk.o
+endif
 aes-mips-$(CONFIG_CPU_LITTLE_ENDIAN) += mipsel/aes-mips-core.o
 aes-mips-$(CONFIG_CPU_BIG_ENDIAN) += mips/aes-mips-core.o
 ifeq ($(CONFIG_CRYPTO_AES_MIPS_GCM),y)

@@ -883,12 +883,10 @@ NESTED(aes_mips_ctr_crypt, FRAMESZ, ra)
 	 * round-1 columns 1-3. X0 is column 0 without T3[byte 15].
 	 * Z0-Z3 are round-2 columns with the one lookup that depends on
 	 * that byte left out. K, the key's byte 15, is bits 31:24 of that
-	 * key word and is kept in s8.
+	 * key word and is kept in s8. s4-s6 already match OFF_I0..I2:
+	 * the prologue, .Lcarry_spill and .Lfast_wrap keep them.
 	 */
 .Lprecompute:
-	sw	s4, OFF_I0(sp)
-	sw	s5, OFF_I1(sp)
-	sw	s6, OFF_I2(sp)
 	lw	v1, 12(a0)
 	wsbh	s0, s7
 	rotr	s0, s0, 16

@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=aes-mips
-PKG_VERSION:=2026.11.22
+PKG_VERSION:=2026.11.25
 PKG_RELEASE:=1
 
 PKG_LICENSE:=GPL-2.0-only

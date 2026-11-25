@@ -9,6 +9,7 @@
 #include <linux/errno.h>
 #include <linux/highmem.h>
 #include <linux/kernel.h>
+#include <linux/mm.h>
 #include <linux/string.h>
 
 #include "aes-ctr-walk.h"
@@ -95,6 +96,22 @@ int sg_at(struct scatterlist *sg, unsigned int skip,
 	return 0;
 }
 
+/*
+ * Map the page that holds byte off of this segment. A highmem kmap covers
+ * one page, so *n is cut to the end of that page. Lowmem is linear:
+ * PageHighMem is 0 and *n is left alone. kunmap_local the returned pointer.
+ */
+void *sg_map(struct scatterlist *sg, unsigned int off, unsigned int *n)
+{
+	unsigned int pos = sg->offset + off;
+	struct page *page = sg_page(sg) + (pos >> PAGE_SHIFT);
+
+	pos = offset_in_page(pos);
+	if (PageHighMem(page))
+		*n = min_t(unsigned int, *n, PAGE_SIZE - pos);
+	return kmap_local_page(page) + pos;
+}
+
 int ctr_sg(const struct crypto_aes_ctx *aes,
 	   struct scatterlist *ssg, unsigned int sskip,
 	   struct scatterlist *dsg, unsigned int dskip,
@@ -109,13 +126,12 @@ int ctr_sg(const struct crypto_aes_ctx *aes,
 
 	while (len) {
 		unsigned int n = min3(len, ssg->length - sskip, dsg->length - dskip);
-		void *spage = kmap_local_page(sg_page(ssg));
-		void *dpage = kmap_local_page(sg_page(dsg));
+		void *sp = sg_map(ssg, sskip, &n);
+		void *dp = sg_map(dsg, dskip, &n);
 
-		ctr_crypt(aes, dpage + dsg->offset + dskip,
-			  spage + ssg->offset + sskip, n, ctr, &ks);
-		kunmap_local(dpage);
-		kunmap_local(spage);
+		ctr_crypt(aes, dp, sp, n, ctr, &ks);
+		kunmap_local(dp);
+		kunmap_local(sp);
 		len -= n;
 		sskip += n;
 		dskip += n;
@@ -134,4 +150,26 @@ int ctr_sg(const struct crypto_aes_ctx *aes,
 	}
 	memzero_explicit(&ks, sizeof(ks));
 	return 0;
+}
+
+void sg_zero(struct scatterlist *sg, unsigned int skip, unsigned int len)
+{
+	if (!len)
+		return;
+	if (sg_at(sg, skip, &sg, &skip))
+		return;
+
+	while (len && sg) {
+		unsigned int n = min_t(unsigned int, len, sg->length - skip);
+		void *p = sg_map(sg, skip, &n);
+
+		memzero_explicit(p, n);
+		kunmap_local(p);
+		len -= n;
+		skip += n;
+		if (skip == sg->length) {
+			sg = sg_next(sg);
+			skip = 0;
+		}
+	}
 }

@@ -75,15 +75,16 @@ static int ghash_sg(struct ghash_acc *acc, const void *tab, unsigned int kib,
 
 	while (len) {
 		unsigned int n = min_t(unsigned int, len, sg->length - skip);
-		unsigned int took = n;
-		void *page = kmap_local_page(sg_page(sg));
-		u8 *p = page + sg->offset + skip;
+		void *p = sg_map(sg, skip, &n);
 
 		ghash_acc_update(acc, tab, kib, p, n);
-		kunmap_local(page);
-		len -= took;
-		skip = 0;
-		sg = sg_next(sg);
+		kunmap_local(p);
+		len -= n;
+		skip += n;
+		if (skip == sg->length) {
+			sg = sg_next(sg);
+			skip = 0;
+		}
 		if (len && !sg)
 			return -EINVAL;
 	}
@@ -211,10 +212,10 @@ static int gcm_mips_setkey(struct crypto_aead *tfm, const u8 *key,
 
 	aes_mips_encrypt(&ctx->aes, h, zero);
 	err = ghash_tab_init(ctx->tab, h, kib / 4);
+	memzero_explicit(h, sizeof(h));
 	if (err)
 		return err;
 	ctx->kib = kib;
-	memzero_explicit(h, sizeof(h));
 	return 0;
 }
 

@@ -22,6 +22,12 @@ struct ctr_ks {
 
 int sg_at(struct scatterlist *sg, unsigned int skip,
 	  struct scatterlist **out, unsigned int *off);
+
+/* Map the page of byte off. Highmem cuts *n to that page. */
+void *sg_map(struct scatterlist *sg, unsigned int off, unsigned int *n);
+
+/* Best effort. A short list is wiped up to its end. */
+void sg_zero(struct scatterlist *sg, unsigned int skip, unsigned int len);
 void ctr_crypt(const struct crypto_aes_ctx *aes, u8 *dst, const u8 *src,
 	       unsigned int len, u8 ctr[AES_BLOCK_SIZE], struct ctr_ks *ks);
 int ctr_sg(const struct crypto_aes_ctx *aes,

@@ -78,19 +78,19 @@ GHASH — таблицы 16 КиБ при L1 D ≥ 32 КиБ, иначе 8 Ки�
 </tr>
 </thead>
 <tbody>
-<tr><td>AES-128-ECB</td><td align="right">15,1</td><td align="right">21,3</td><td align="right">+41%</td><td align="right">11,9</td><td align="right">20,4</td><td align="right">+72%</td></tr>
-<tr><td>AES-192-ECB</td><td align="right">12,8</td><td align="right">17,8</td><td align="right">+39%</td><td align="right">10,2</td><td align="right">17,2</td><td align="right">+69%</td></tr>
+<tr><td>AES-128-ECB</td><td align="right">15,1</td><td align="right">21,2</td><td align="right">+41%</td><td align="right">11,9</td><td align="right">20,5</td><td align="right">+72%</td></tr>
+<tr><td>AES-192-ECB</td><td align="right">12,8</td><td align="right">17,8</td><td align="right">+40%</td><td align="right">10,2</td><td align="right">17,2</td><td align="right">+69%</td></tr>
 <tr><td>AES-256-ECB</td><td align="right">11,1</td><td align="right">15,3</td><td align="right">+38%</td><td align="right">8,9</td><td align="right">14,9</td><td align="right">+67%</td></tr>
-<tr><td>AES-128-CBC</td><td align="right">13,0</td><td align="right">21,2</td><td align="right">+63%</td><td align="right">10,3</td><td align="right">20,4</td><td align="right">+97%</td></tr>
-<tr><td>AES-192-CBC</td><td align="right">11,2</td><td align="right">17,7</td><td align="right">+58%</td><td align="right">9,0</td><td align="right">17,2</td><td align="right">+91%</td></tr>
-<tr><td>AES-256-CBC</td><td align="right">9,9</td><td align="right">15,3</td><td align="right">+55%</td><td align="right">8,0</td><td align="right">14,8</td><td align="right">+85%</td></tr>
-<tr><td>AES-128-CTR</td><td align="right">13,6</td><td align="right">24,9</td><td align="right">+83%</td><td align="right">10,8</td><td align="right">24,2</td><td align="right">+124%</td></tr>
-<tr><td>AES-192-CTR</td><td align="right">11,6</td><td align="right">20,3</td><td align="right">+75%</td><td align="right">9,4</td><td align="right">19,8</td><td align="right">+111%</td></tr>
-<tr><td>AES-256-CTR</td><td align="right">10,2</td><td align="right">17,1</td><td align="right">+68%</td><td align="right">8,3</td><td align="right">16,7</td><td align="right">+101%</td></tr>
-<tr><td>AES-128-GCM</td><td align="right">7,3</td><td align="right">17,3</td><td align="right">+137%</td><td align="right">6,8</td><td align="right">15,5</td><td align="right">+128%</td></tr>
-<tr><td>AES-192-GCM</td><td align="right">6,7</td><td align="right">15,0</td><td align="right">+124%</td><td align="right">6,2</td><td align="right">13,6</td><td align="right">+119%</td></tr>
-<tr><td>AES-256-GCM</td><td align="right">6,2</td><td align="right">13,2</td><td align="right">+113%</td><td align="right">5,7</td><td align="right">12,1</td><td align="right">+112%</td></tr>
-<tr><td>AES-128-CCM (<code>rfc4309</code>)</td><td align="right">6,5</td><td align="right">11,1</td><td align="right">+71%</td><td align="right">5,3</td><td align="right">10,6</td><td align="right">+100%</td></tr>
+<tr><td>AES-128-CBC</td><td align="right">13,0</td><td align="right">21,1</td><td align="right">+62%</td><td align="right">10,3</td><td align="right">20,4</td><td align="right">+97%</td></tr>
+<tr><td>AES-192-CBC</td><td align="right">11,2</td><td align="right">17,6</td><td align="right">+57%</td><td align="right">9,0</td><td align="right">17,2</td><td align="right">+91%</td></tr>
+<tr><td>AES-256-CBC</td><td align="right">9,9</td><td align="right">15,2</td><td align="right">+53%</td><td align="right">8,0</td><td align="right">14,8</td><td align="right">+85%</td></tr>
+<tr><td>AES-128-CTR</td><td align="right">13,6</td><td align="right">24,9</td><td align="right">+84%</td><td align="right">10,8</td><td align="right">24,2</td><td align="right">+123%</td></tr>
+<tr><td>AES-192-CTR</td><td align="right">11,6</td><td align="right">20,3</td><td align="right">+74%</td><td align="right">9,4</td><td align="right">19,8</td><td align="right">+111%</td></tr>
+<tr><td>AES-256-CTR</td><td align="right">10,2</td><td align="right">17,1</td><td align="right">+67%</td><td align="right">8,3</td><td align="right">16,7</td><td align="right">+102%</td></tr>
+<tr><td>AES-128-GCM</td><td align="right">7,3</td><td align="right">17,4</td><td align="right">+138%</td><td align="right">6,9</td><td align="right">15,5</td><td align="right">+125%</td></tr>
+<tr><td>AES-192-GCM</td><td align="right">6,7</td><td align="right">15,0</td><td align="right">+123%</td><td align="right">6,3</td><td align="right">13,7</td><td align="right">+120%</td></tr>
+<tr><td>AES-256-GCM</td><td align="right">6,2</td><td align="right">13,2</td><td align="right">+112%</td><td align="right">5,7</td><td align="right">12,1</td><td align="right">+110%</td></tr>
+<tr><td>AES-128-CCM (<code>rfc4309</code>)</td><td align="right">6,5</td><td align="right">11,0</td><td align="right">+69%</td><td align="right">5,3</td><td align="right">10,6</td><td align="right">+98%</td></tr>
 </tbody>
 </table>
 

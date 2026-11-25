@@ -130,9 +130,9 @@ static int mac_sg(struct mac_acc *m, const struct crypto_aes_ctx *aes,
 
 	while (len) {
 		unsigned int n = min_t(unsigned int, len, sg->length - skip);
+		u8 *p = sg_map(sg, skip, &n);
+		void *map = p;
 		unsigned int took = n;
-		void *page = kmap_local_page(sg_page(sg));
-		u8 *p = page + sg->offset + skip;
 
 		if (!m->n && n >= AES_BLOCK_SIZE &&
 		    IS_ALIGNED((unsigned long)p, 4)) {
@@ -144,10 +144,13 @@ static int mac_sg(struct mac_acc *m, const struct crypto_aes_ctx *aes,
 		}
 		if (n)
 			mac_feed(m, aes, p, n);
-		kunmap_local(page);
+		kunmap_local(map);
 		len -= took;
-		skip = 0;
-		sg = sg_next(sg);
+		skip += took;
+		if (skip == sg->length) {
+			sg = sg_next(sg);
+			skip = 0;
+		}
 		if (len && !sg)
 			return -EINVAL;
 	}
@@ -228,14 +231,15 @@ static int ccm_crypt(const struct crypto_aes_ctx *aes, const u8 iv[AES_BLOCK_SIZ
 					 authsize, 0);
 		crypto_xor(have, mask, authsize);
 		err = ctr_sg(aes, src, assoclen, dst, assoclen, cryptlen, ctr);
+		if (!err) {
+			err = ccm_mac(aes, &mac, iv, authsize, src, dst,
+				      assoclen, cryptlen);
+			if (!err && crypto_memneq(mac.state, have, authsize))
+				err = -EBADMSG;
+		}
+		/* ctr_sg may have stored plaintext before the tag check failed. */
 		if (err)
-			goto out;
-		err = ccm_mac(aes, &mac, iv, authsize, src, dst, assoclen,
-			      cryptlen);
-		if (err)
-			goto out;
-		if (crypto_memneq(mac.state, have, authsize))
-			err = -EBADMSG;
+			sg_zero(dst, assoclen, cryptlen);
 	}
 
 out:
@@ -372,6 +376,24 @@ static int ccm_selftest_buf(const struct crypto_aes_ctx *aes, bool inplace)
 			sizeof(rfc_pt), false);
 	if (err || memcmp(back + sizeof(rfc_aad), rfc_pt, sizeof(rfc_pt)))
 		return -EINVAL;
+
+	/* A bad tag returns -EBADMSG and leaves zeros where plaintext was. */
+	dst[sizeof(rfc_aad) + sizeof(rfc_pt)] ^= 1;
+	memset(back, 0xa5, sizeof(back));
+	sg_init_one(&ssg, dst, sizeof(rfc_aad) + sizeof(rfc_ct));
+	sg_init_one(&dsg, back, sizeof(back));
+	err = ccm_crypt(aes, rfc_iv, 8, &ssg, &dsg, sizeof(rfc_aad),
+			sizeof(rfc_pt), false);
+	if (err != -EBADMSG)
+		return -EINVAL;
+	{
+		unsigned int i;
+
+		for (i = 0; i < sizeof(rfc_pt); i++) {
+			if (back[sizeof(rfc_aad) + i])
+				return -EINVAL;
+		}
+	}
 	return 0;
 }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-25
+
+GCM and CCM map one page of a scatterlist segment. A highmem segment that crosses a page, or starts past the end of its first page, is no longer read or written past the mapped page. A failed CCM decrypt wipes the plaintext it already stored. `gcm_mips_setkey` clears the GHASH key on the stack when the table allocation fails.
+
 ## 2026-11-24
 
 GCM and CCM share one CTR scatterlist walk in `aes-ctr-walk.c`; the duplicated `ctr_sg` and the former inline helpers leave the glue. `AES_MIPS_CTR_ASM` follows CTR alone (GCM and CCM still select CTR). Big-endian T-tables are swapped once in `aes_mips_mod_init` before the selftest, not lazily on the first setkey. The CTR fast path no longer spills `s4`–`s6` again in `.Lprecompute`: the prologue already keeps them.
